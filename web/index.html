@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Kartapp – Vind og installasjoner (fase 1)</title>
+  <title>Kartapp – Vind, installasjoner og oljeutslipp</title>
 
   <link
     rel="stylesheet"
@@ -24,6 +24,10 @@
       text-shadow: 0 0 2px #fff, 0 0 2px #fff;
     }
 
+    /* Oljefelt er klikkbare for å starte utslipp. */
+    .inst-icon { font-size: 22px; line-height: 22px; text-shadow: 0 0 2px #fff; }
+    .inst-icon.clickable { cursor: pointer; color: #d84315; }
+
     .legend {
       background: #fff;
       padding: 8px 10px;
@@ -34,6 +38,29 @@
     .legend b { display: block; margin-bottom: 4px; }
     .legend .inst-dot { color: #d84315; }
     .legend .wind-dot { color: #1565c0; }
+    .legend .spill-dot { color: #0a0a0a; }
+
+    /* Tidsakse-kontroll nede til venstre. */
+    .timeline {
+      background: #fff;
+      padding: 10px 12px;
+      border-radius: 8px;
+      box-shadow: 0 1px 6px rgba(0, 0, 0, 0.35);
+      font: 13px/1.4 system-ui, sans-serif;
+      width: 280px;
+    }
+    .timeline .title { font-weight: 600; margin-bottom: 6px; }
+    .timeline .row { display: flex; align-items: center; gap: 8px; }
+    .timeline input[type="range"] { flex: 1; }
+    .timeline .readout { margin-top: 6px; color: #333; }
+    .timeline .readout b { color: #000; }
+    .timeline button {
+      width: 34px; height: 30px;
+      border: 1px solid #bbb; border-radius: 6px;
+      background: #f5f5f5; cursor: pointer; font-size: 14px;
+    }
+    .timeline button:disabled { opacity: 0.5; cursor: default; }
+    .timeline.idle .readout { color: #888; }
   </style>
 </head>
 <body>
@@ -45,7 +72,7 @@
     crossorigin=""
   ></script>
   <script>
-    const map = L.map("map").setView([66.3, 9.5], 7);
+    const map = L.map("map").setView([66.3, 10.5], 7);
 
     L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
       maxZoom: 19,
@@ -64,13 +91,107 @@
       });
     }
 
-    const installationIcon = L.divIcon({
-      className: "",
-      html: '<div style="font-size:22px;line-height:22px;text-shadow:0 0 2px #fff">&#9873;</div>',
-      iconSize: [22, 22],
-      iconAnchor: [11, 20],
-    });
+    function installationIcon(clickable) {
+      return L.divIcon({
+        className: "",
+        html: `<div class="inst-icon${clickable ? " clickable" : ""}">&#9873;</div>`,
+        iconSize: [22, 22],
+        iconAnchor: [11, 20],
+      });
+    }
 
+    // Slug fra navn, matcher filene fra simulate_spill.py: "Aasta Hansteen" -> aasta_hansteen.
+    const slugify = (name) => name.trim().toLowerCase().replace(/\s+/g, "_");
+
+    // ---- Oljeutslipp + tidsakse ----
+    const TOTAL_HOURS = 72;        // samme som SIM_HOURS i simulate_spill.py
+    const STEP_MS = 180;           // avspillingsfart: ms per time
+
+    const spillLayer = L.layerGroup().addTo(map);
+    let spill = null;              // { name, byHour[], maxHour }
+    let hour = 0;
+    let playing = false;
+    let timer = null;
+
+    // Tegner alle tidssteg 0..uptoHour. Eldre steg tegnes svakere (trail), og de
+    // overlappende lagene gjør de lengst eksponerte områdene mørkere – som en skygge.
+    function renderSpill(uptoHour) {
+      spillLayer.clearLayers();
+      if (!spill) return;
+      for (let h = 0; h <= uptoHour; h++) {
+        const f = spill.byHour[h];
+        if (!f) continue;
+        const isCurrent = h === uptoHour;
+        L.geoJSON(f, {
+          style: {
+            stroke: isCurrent,
+            color: "#000",
+            weight: isCurrent ? 1.5 : 0,
+            fillColor: "#0a0a0a",
+            fillOpacity: isCurrent ? 0.38 : 0.1,
+          },
+        }).addTo(spillLayer);
+      }
+      const props = spill.byHour[uptoHour] ? spill.byHour[uptoHour].properties : null;
+      const area = props ? props.area_km2 : 0;
+      ui.slider.value = uptoHour;
+      ui.readout.innerHTML =
+        `<b>${spill.name}</b> &middot; Time: <b>${uptoHour}</b> / ${spill.maxHour} ` +
+        `&middot; Areal: <b>${area.toFixed(1)}</b> km²`;
+    }
+
+    function pause() {
+      playing = false;
+      if (timer) { clearInterval(timer); timer = null; }
+      ui.playBtn.innerHTML = "&#9654;"; // ▶
+    }
+
+    function play() {
+      if (!spill) return;
+      if (hour >= spill.maxHour) hour = 0; // start på nytt hvis vi står på slutten
+      playing = true;
+      ui.playBtn.innerHTML = "&#10073;&#10073;"; // ❚❚
+      timer = setInterval(() => {
+        hour += 1;
+        if (hour >= spill.maxHour) {
+          hour = spill.maxHour;
+          renderSpill(hour);
+          pause();
+          return;
+        }
+        renderSpill(hour);
+      }, STEP_MS);
+    }
+
+    async function startSpill(name) {
+      pause();
+      let fc;
+      try {
+        fc = await fetch(`../data/processed/spills/${slugify(name)}.geojson`).then((r) => {
+          if (!r.ok) throw new Error(r.status);
+          return r.json();
+        });
+      } catch (e) {
+        alert(`Fant ikke utslippsdata for ${name}. Kjør scripts/simulate_spill.py.`);
+        return;
+      }
+      const byHour = [];
+      let maxHour = 0;
+      fc.features.forEach((f) => {
+        byHour[f.properties.hour] = f;
+        maxHour = Math.max(maxHour, f.properties.hour);
+      });
+      spill = { name, byHour, maxHour };
+      hour = 0;
+      ui.root.classList.remove("idle");
+      ui.playBtn.disabled = false;
+      ui.slider.disabled = false;
+      ui.slider.max = maxHour;
+      renderSpill(0);
+      play(); // start avspilling automatisk når et felt velges
+    }
+
+    // ---- Lag ----
     async function loadLayers() {
       const [stations, installations] = await Promise.all([
         fetch("../data/processed/wind_stations.geojson").then((r) => r.json()),
@@ -92,18 +213,58 @@
       }).addTo(map);
 
       L.geoJSON(installations, {
-        pointToLayer: (feature, latlng) => L.marker(latlng, { icon: installationIcon }),
+        pointToLayer: (feature, latlng) =>
+          L.marker(latlng, { icon: installationIcon(feature.properties.kind === "oil_field") }),
         onEachFeature: (feature, layer) => {
           const p = feature.properties;
-          layer.bindPopup(
+          const isOil = p.kind === "oil_field";
+          const info =
             `<b>${p.name}</b><br>` +
-              `Type: ${p.kind}<br>` +
-              `Operatør: ${p.operator}<br>` +
-              `Nærmeste stasjon: ${p.nearest_station} (${p.dist_km} km)`
-          );
+            `Type: ${p.kind}<br>` +
+            `Operatør: ${p.operator}<br>` +
+            `Nærmeste stasjon: ${p.nearest_station} (${p.dist_km} km)`;
+          if (isOil) {
+            // Oljefelt: hover-tooltip for info, klikk starter utslipp. Ingen popup,
+            // så den ikke dekker oljeflaket som tegnes ved installasjonen.
+            layer.bindTooltip(`${p.name} – klikk for oljeutslipp`);
+            layer.on("click", () => startSpill(p.name));
+          } else {
+            layer.bindPopup(info);
+          }
         },
       }).addTo(map);
     }
+
+    // ---- Tidsakse-kontroll (nede til venstre) ----
+    const ui = {};
+    const timeline = L.control({ position: "bottomleft" });
+    timeline.onAdd = function () {
+      const div = L.DomUtil.create("div", "timeline idle");
+      div.innerHTML =
+        '<div class="title">Oljeutslipp – tidsakse</div>' +
+        '<div class="row">' +
+        '  <button class="play" title="Spill av / pause" disabled>&#9654;</button>' +
+        `  <input type="range" class="slider" min="0" max="${TOTAL_HOURS}" value="0" step="1" disabled />` +
+        "</div>" +
+        '<div class="readout">Klikk et oljefelt (&#9873;) for å starte.</div>';
+      // Ikke la klikk/dra på kontrollen flytte kartet.
+      L.DomEvent.disableClickPropagation(div);
+      L.DomEvent.disableScrollPropagation(div);
+
+      ui.root = div;
+      ui.playBtn = div.querySelector(".play");
+      ui.slider = div.querySelector(".slider");
+      ui.readout = div.querySelector(".readout");
+
+      ui.playBtn.addEventListener("click", () => (playing ? pause() : play()));
+      ui.slider.addEventListener("input", () => {
+        pause();
+        hour = Number(ui.slider.value);
+        renderSpill(hour);
+      });
+      return div;
+    };
+    timeline.addTo(map);
 
     const legend = L.control({ position: "bottomright" });
     legend.onAdd = function () {
@@ -111,7 +272,8 @@
       div.innerHTML =
         "<b>Tegnforklaring</b>" +
         '<span class="wind-dot">&#8593;</span> Vindstasjon (pil = dit vinden blåser)<br>' +
-        '<span class="inst-dot">&#9873;</span> Installasjon';
+        '<span class="inst-dot">&#9873;</span> Installasjon (oljefelt er klikkbare)<br>' +
+        '<span class="spill-dot">&#9632;</span> Oljeflak (mørk = eldre/lengre eksponering)';
       return div;
     };
     legend.addTo(map);
