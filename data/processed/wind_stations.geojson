@@ -1,0 +1,16 @@
+{
+"type": "FeatureCollection",
+"name": "wind_stations",
+"crs": { "type": "name", "properties": { "name": "urn:ogc:def:crs:OGC:1.3:CRS84" } },
+"features": [
+{ "type": "Feature", "properties": { "station_id": "NL01", "name": "Træna fyr", "lat": 66.5, "lon": 11.98, "dominant_sector": 10, "dominant_label": "SV", "dominant_dir_deg": 225.0, "mean_wind_speed": 7.15, "dominant_share": 0.229, "n_obs": 8611 }, "geometry": { "type": "Point", "coordinates": [ 11.98, 66.5 ] } },
+{ "type": "Feature", "properties": { "station_id": "NL02", "name": "Myken", "lat": 66.76, "lon": 12.49, "dominant_sector": 9, "dominant_label": "SSV", "dominant_dir_deg": 202.5, "mean_wind_speed": 7.12, "dominant_share": 0.224, "n_obs": 8616 }, "geometry": { "type": "Point", "coordinates": [ 12.49, 66.76 ] } },
+{ "type": "Feature", "properties": { "station_id": "NL03", "name": "Bodø havn", "lat": 67.28, "lon": 14.38, "dominant_sector": 8, "dominant_label": "S", "dominant_dir_deg": 180.0, "mean_wind_speed": 7.09, "dominant_share": 0.224, "n_obs": 8625 }, "geometry": { "type": "Point", "coordinates": [ 14.38, 67.28 ] } },
+{ "type": "Feature", "properties": { "station_id": "NL04", "name": "Røst", "lat": 67.52, "lon": 12.1, "dominant_sector": 11, "dominant_label": "VSV", "dominant_dir_deg": 247.5, "mean_wind_speed": 7.1, "dominant_share": 0.223, "n_obs": 8641 }, "geometry": { "type": "Point", "coordinates": [ 12.1, 67.52 ] } },
+{ "type": "Feature", "properties": { "station_id": "NL05", "name": "Sandnessjøen", "lat": 66.02, "lon": 12.63, "dominant_sector": 7, "dominant_label": "SSØ", "dominant_dir_deg": 157.5, "mean_wind_speed": 7.09, "dominant_share": 0.223, "n_obs": 8611 }, "geometry": { "type": "Point", "coordinates": [ 12.63, 66.02 ] } },
+{ "type": "Feature", "properties": { "station_id": "NL06", "name": "Brønnøysund", "lat": 65.47, "lon": 12.21, "dominant_sector": 9, "dominant_label": "SSV", "dominant_dir_deg": 202.5, "mean_wind_speed": 7.17, "dominant_share": 0.221, "n_obs": 8633 }, "geometry": { "type": "Point", "coordinates": [ 12.21, 65.47 ] } },
+{ "type": "Feature", "properties": { "station_id": "NL07", "name": "Vega", "lat": 65.67, "lon": 11.9, "dominant_sector": 8, "dominant_label": "S", "dominant_dir_deg": 180.0, "mean_wind_speed": 7.04, "dominant_share": 0.216, "n_obs": 8623 }, "geometry": { "type": "Point", "coordinates": [ 11.9, 65.67 ] } },
+{ "type": "Feature", "properties": { "station_id": "NL08", "name": "Lovund", "lat": 66.36, "lon": 12.37, "dominant_sector": 10, "dominant_label": "SV", "dominant_dir_deg": 225.0, "mean_wind_speed": 7.11, "dominant_share": 0.223, "n_obs": 8594 }, "geometry": { "type": "Point", "coordinates": [ 12.37, 66.36 ] } },
+{ "type": "Feature", "properties": { "station_id": "NL09", "name": "Værøy", "lat": 67.66, "lon": 12.69, "dominant_sector": 12, "dominant_label": "V", "dominant_dir_deg": 270.0, "mean_wind_speed": 7.13, "dominant_share": 0.217, "n_obs": 8614 }, "geometry": { "type": "Point", "coordinates": [ 12.69, 67.66 ] } }
+]
+}

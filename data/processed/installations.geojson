@@ -1,0 +1,11 @@
+{
+"type": "FeatureCollection",
+"name": "installations",
+"crs": { "type": "name", "properties": { "name": "urn:ogc:def:crs:OGC:1.3:CRS84" } },
+"features": [
+{ "type": "Feature", "properties": { "name": "Norne", "kind": "oil_field", "operator": "Equinor", "lat": 66.02, "lon": 8.08, "nearest_station": "Vega", "dist_km": 178.8 }, "geometry": { "type": "Point", "coordinates": [ 8.08, 66.02 ] } },
+{ "type": "Feature", "properties": { "name": "Skarv", "kind": "gas_field", "operator": "Aker BP", "lat": 65.75, "lon": 7.65, "nearest_station": "Vega", "dist_km": 195.4 }, "geometry": { "type": "Point", "coordinates": [ 7.65, 65.75 ] } },
+{ "type": "Feature", "properties": { "name": "Aasta Hansteen", "kind": "gas_field", "operator": "Equinor", "lat": 67.07, "lon": 7.02, "nearest_station": "Røst", "dist_km": 224.6 }, "geometry": { "type": "Point", "coordinates": [ 7.02, 67.07 ] } },
+{ "type": "Feature", "properties": { "name": "Heidrun", "kind": "oil_field", "operator": "Equinor", "lat": 65.33, "lon": 7.32, "nearest_station": "Vega", "dist_km": 215.4 }, "geometry": { "type": "Point", "coordinates": [ 7.32, 65.33 ] } }
+]
+}
