@@ -1,0 +1,128 @@
+<!DOCTYPE html>
+<html lang="no">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Kartapp – Vind og installasjoner (fase 1)</title>
+
+  <link
+    rel="stylesheet"
+    href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
+    integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY="
+    crossorigin=""
+  />
+  <style>
+    html, body { margin: 0; height: 100%; }
+    #map { height: 100vh; }
+
+    /* Vindpil: en glyph som roteres etter dominerende retning. */
+    .wind-arrow {
+      font-size: 26px;
+      line-height: 26px;
+      color: #1565c0;
+      text-align: center;
+      text-shadow: 0 0 2px #fff, 0 0 2px #fff;
+    }
+
+    .legend {
+      background: #fff;
+      padding: 8px 10px;
+      border-radius: 6px;
+      box-shadow: 0 1px 4px rgba(0, 0, 0, 0.3);
+      font: 13px/1.4 system-ui, sans-serif;
+    }
+    .legend b { display: block; margin-bottom: 4px; }
+    .legend .inst-dot { color: #d84315; }
+    .legend .wind-dot { color: #1565c0; }
+  </style>
+</head>
+<body>
+  <div id="map"></div>
+
+  <script
+    src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
+    integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo="
+    crossorigin=""
+  ></script>
+  <script>
+    const map = L.map("map").setView([66.3, 9.5], 7);
+
+    L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
+      maxZoom: 19,
+      attribution: "&copy; OpenStreetMap-bidragsytere",
+    }).addTo(map);
+
+    // Pilen peker DIT vinden blåser. Feltet dominant_dir_deg er retningen vinden
+    // kommer FRA, så vi legger til 180 grader.
+    function windArrowIcon(fromDeg) {
+      const toDeg = (fromDeg + 180) % 360;
+      return L.divIcon({
+        className: "",
+        html: `<div class="wind-arrow" style="transform: rotate(${toDeg}deg)">&#8593;</div>`,
+        iconSize: [26, 26],
+        iconAnchor: [13, 13],
+      });
+    }
+
+    const installationIcon = L.divIcon({
+      className: "",
+      html: '<div style="font-size:22px;line-height:22px;text-shadow:0 0 2px #fff">&#9873;</div>',
+      iconSize: [22, 22],
+      iconAnchor: [11, 20],
+    });
+
+    async function loadLayers() {
+      const [stations, installations] = await Promise.all([
+        fetch("../data/processed/wind_stations.geojson").then((r) => r.json()),
+        fetch("../data/processed/installations.geojson").then((r) => r.json()),
+      ]);
+
+      L.geoJSON(stations, {
+        pointToLayer: (feature, latlng) =>
+          L.marker(latlng, { icon: windArrowIcon(feature.properties.dominant_dir_deg) }),
+        onEachFeature: (feature, layer) => {
+          const p = feature.properties;
+          layer.bindPopup(
+            `<b>${p.name}</b><br>` +
+              `Dominerende retning: ${p.dominant_label} (${p.dominant_dir_deg}&deg;, fra)<br>` +
+              `Middelvind: ${p.mean_wind_speed} m/s<br>` +
+              `Andel i dominerende sektor: ${(p.dominant_share * 100).toFixed(0)} %`
+          );
+        },
+      }).addTo(map);
+
+      L.geoJSON(installations, {
+        pointToLayer: (feature, latlng) => L.marker(latlng, { icon: installationIcon }),
+        onEachFeature: (feature, layer) => {
+          const p = feature.properties;
+          layer.bindPopup(
+            `<b>${p.name}</b><br>` +
+              `Type: ${p.kind}<br>` +
+              `Operatør: ${p.operator}<br>` +
+              `Nærmeste stasjon: ${p.nearest_station} (${p.dist_km} km)`
+          );
+        },
+      }).addTo(map);
+    }
+
+    const legend = L.control({ position: "bottomright" });
+    legend.onAdd = function () {
+      const div = L.DomUtil.create("div", "legend");
+      div.innerHTML =
+        "<b>Tegnforklaring</b>" +
+        '<span class="wind-dot">&#8593;</span> Vindstasjon (pil = dit vinden blåser)<br>' +
+        '<span class="inst-dot">&#9873;</span> Installasjon';
+      return div;
+    };
+    legend.addTo(map);
+
+    loadLayers().catch((err) => {
+      console.error(err);
+      alert(
+        "Klarte ikke å laste GeoJSON. Kjør scriptene og åpne siden via en lokal " +
+          "HTTP-server (se README/CLAUDE.md)."
+      );
+    });
+  </script>
+</body>
+</html>

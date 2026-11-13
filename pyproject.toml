@@ -1,0 +1,19 @@
+[project]
+name = "kartapp"
+version = "0.1.0"
+description = "Add your description here"
+readme = "README.md"
+authors = [
+    { name = "andreaszahl", email = "andreas.kristiansen@bouvet.no" }
+]
+requires-python = ">=3.13"
+dependencies = [
+    "geopandas>=1.2.0",
+]
+
+[project.scripts]
+kartapp = "kartapp:main"
+
+[build-system]
+requires = ["uv_build>=0.12.22,<0.13.0"]
+build-backend = "uv_build"
