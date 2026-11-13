@@ -11,4 +11,4 @@ wheels/
 
 # Genererte data (reproduserbare fra scripts/)
 /data/raw/
-/data/processed/
+
