@@ -12,55 +12,107 @@
     crossorigin=""
   />
   <style>
-    html, body { margin: 0; height: 100%; }
-    #map { height: 100vh; }
+    /* Fargepalett (dataviz-skillen). Roller, ikke rå hex, brukes nedenfor. */
+    :root {
+      --surface: #fcfcfb;   /* flate for kontroller */
+      --page: #f9f9f7;
+      --ink: #0b0b0b;       /* primær tekst */
+      --ink-2: #52514e;     /* sekundær tekst */
+      --muted: #898781;     /* dempet (labels) */
+      --border: rgba(11, 11, 11, 0.10);
+      --grid: #e1e0d9;
+      --blue: #2a78d6;      /* series 1 – vind */
+      --orange: #eb6834;    /* series 2 – oljefelt */
+      --aqua: #1baf7a;      /* series 3 – gassfelt */
+      --critical: #d03b3b;  /* status – aktiv utslippsfront */
+      --font: system-ui, -apple-system, "Segoe UI", sans-serif;
+    }
 
-    /* Vindpil: en glyph som roteres etter dominerende retning. */
+    html, body { margin: 0; height: 100%; background: var(--page); }
+    #map { height: 100vh; background: var(--page); }
+
+    /* Vindpil: SVG-pil som roteres etter dominerende retning, med hvit glorie. */
     .wind-arrow {
-      font-size: 26px;
-      line-height: 26px;
-      color: #1565c0;
-      text-align: center;
-      text-shadow: 0 0 2px #fff, 0 0 2px #fff;
+      width: 22px; height: 22px;
+      filter: drop-shadow(0 0 1px #fff) drop-shadow(0 0 1px #fff);
     }
 
-    /* Oljefelt er klikkbare for å starte utslipp. */
-    .inst-icon { font-size: 22px; line-height: 22px; text-shadow: 0 0 2px #fff; }
-    .inst-icon.clickable { cursor: pointer; color: #d84315; }
-
-    .legend {
-      background: #fff;
-      padding: 8px 10px;
-      border-radius: 6px;
-      box-shadow: 0 1px 4px rgba(0, 0, 0, 0.3);
-      font: 13px/1.4 system-ui, sans-serif;
+    /* Installasjons-ikon: SVG-plattform i en «chip» med kant og skygge. */
+    .inst-badge {
+      position: relative; width: 30px; height: 30px; display: block;
+      filter: drop-shadow(0 1px 2px rgba(11, 11, 11, 0.28));
     }
-    .legend b { display: block; margin-bottom: 4px; }
-    .legend .inst-dot { color: #d84315; }
-    .legend .wind-dot { color: #1565c0; }
-    .legend .spill-dot { color: #0a0a0a; }
+    .inst-badge.oil { cursor: pointer; }
+    /* Puls-ring signaliserer at oljefeltet er klikkbart (utslippskilde). */
+    .inst-badge.oil::after {
+      content: ""; position: absolute; left: 2px; top: 2px;
+      width: 26px; height: 26px; border-radius: 50%;
+      animation: pulse 2.2s ease-out infinite;
+    }
+    @keyframes pulse {
+      0%   { box-shadow: 0 0 0 0 rgba(235, 104, 52, 0.45); }
+      70%  { box-shadow: 0 0 0 10px rgba(235, 104, 52, 0); }
+      100% { box-shadow: 0 0 0 0 rgba(235, 104, 52, 0); }
+    }
 
-    /* Tidsakse-kontroll nede til venstre. */
-    .timeline {
-      background: #fff;
+    /* Felles kort-stil for kontroller (legend + tidsakse). */
+    .card {
+      background: var(--surface);
+      color: var(--ink-2);
+      border: 1px solid var(--border);
+      border-radius: 10px;
       padding: 10px 12px;
-      border-radius: 8px;
-      box-shadow: 0 1px 6px rgba(0, 0, 0, 0.35);
-      font: 13px/1.4 system-ui, sans-serif;
-      width: 280px;
+      box-shadow: 0 2px 10px rgba(11, 11, 11, 0.12);
+      font: 13px/1.45 var(--font);
     }
-    .timeline .title { font-weight: 600; margin-bottom: 6px; }
-    .timeline .row { display: flex; align-items: center; gap: 8px; }
-    .timeline input[type="range"] { flex: 1; }
-    .timeline .readout { margin-top: 6px; color: #333; }
-    .timeline .readout b { color: #000; }
+
+    .legend b { display: block; color: var(--ink); margin-bottom: 6px; font-size: 12px;
+      letter-spacing: 0.02em; text-transform: uppercase; }
+    .legend .item { display: flex; align-items: center; gap: 8px; margin: 3px 0; }
+    .legend .swatch { width: 14px; height: 14px; flex: none; display: inline-block; }
+
+    .timeline { width: 300px; }
+    .timeline .title { font-weight: 600; color: var(--ink); margin-bottom: 8px;
+      font-size: 12px; letter-spacing: 0.02em; text-transform: uppercase; }
+    .timeline .row { display: flex; align-items: center; gap: 10px; }
+    .timeline .readout { margin-top: 8px; color: var(--ink-2);
+      font-variant-numeric: tabular-nums; }
+    .timeline .readout b { color: var(--ink); }
+    .timeline.idle .readout { color: var(--muted); }
+
     .timeline button {
-      width: 34px; height: 30px;
-      border: 1px solid #bbb; border-radius: 6px;
-      background: #f5f5f5; cursor: pointer; font-size: 14px;
+      width: 36px; height: 32px; flex: none;
+      border: 1px solid var(--border); border-radius: 8px;
+      background: var(--orange); color: #fff; cursor: pointer; font-size: 13px;
+      display: inline-flex; align-items: center; justify-content: center;
+      transition: filter 0.15s;
     }
-    .timeline button:disabled { opacity: 0.5; cursor: default; }
-    .timeline.idle .readout { color: #888; }
+    .timeline button:hover { filter: brightness(1.05); }
+    .timeline button:disabled { background: var(--grid); color: var(--muted); cursor: default; }
+
+    /* Egendefinert glidebryter i orange aksent. */
+    .timeline input[type="range"] {
+      flex: 1; -webkit-appearance: none; appearance: none;
+      height: 4px; border-radius: 2px; background: var(--grid); outline: none;
+    }
+    .timeline input[type="range"]::-webkit-slider-thumb {
+      -webkit-appearance: none; appearance: none;
+      width: 16px; height: 16px; border-radius: 50%;
+      background: var(--orange); border: 2px solid #fff;
+      box-shadow: 0 1px 3px rgba(11, 11, 11, 0.35); cursor: pointer;
+    }
+    .timeline input[type="range"]::-moz-range-thumb {
+      width: 16px; height: 16px; border-radius: 50%;
+      background: var(--orange); border: 2px solid #fff;
+      box-shadow: 0 1px 3px rgba(11, 11, 11, 0.35); cursor: pointer;
+    }
+    .timeline input[type="range"]:disabled { opacity: 0.5; }
+    .timeline input[type="range"]:disabled::-webkit-slider-thumb { background: var(--muted); }
+
+    /* Leaflet-popup i samme stil. */
+    .leaflet-popup-content-wrapper { border-radius: 10px; }
+    .leaflet-popup-content { font: 13px/1.45 var(--font); color: var(--ink-2); }
+    .leaflet-popup-content b { color: var(--ink); }
   </style>
 </head>
 <body>
@@ -72,32 +124,60 @@
     crossorigin=""
   ></script>
   <script>
+    // Palett-verdier for SVG-ikoner (samme roller som CSS-variablene over).
+    const C = {
+      surface: "#fcfcfb",
+      blue: "#2a78d6",
+      orange: "#eb6834",
+      aqua: "#1baf7a",
+      critical: "#d03b3b",
+      slick: "#0b0b0b",
+    };
+
     const map = L.map("map").setView([66.3, 10.5], 7);
 
-    L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
-      maxZoom: 19,
-      attribution: "&copy; OpenStreetMap-bidragsytere",
-    }).addTo(map);
+    // Dempet lyst grunnkart (Esri Light Gray Canvas) – ren flate uten API-nøkkel
+    // som lar dataene stå frem.
+    L.tileLayer(
+      "https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Light_Gray_Base/MapServer/tile/{z}/{y}/{x}",
+      {
+        maxZoom: 16,
+        attribution:
+          'Tiles &copy; Esri &mdash; Esri, DeLorme, NAVTEQ ' +
+          '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>-bidragsytere',
+      }
+    ).addTo(map);
 
-    // Pilen peker DIT vinden blåser. Feltet dominant_dir_deg er retningen vinden
-    // kommer FRA, så vi legger til 180 grader.
+    // Pilen peker DIT vinden blåser. dominant_dir_deg er retningen vinden kommer
+    // FRA, så vi legger til 180 grader. SVG gir skarp rotasjon i alle vinkler.
     function windArrowIcon(fromDeg) {
       const toDeg = (fromDeg + 180) % 360;
-      return L.divIcon({
-        className: "",
-        html: `<div class="wind-arrow" style="transform: rotate(${toDeg}deg)">&#8593;</div>`,
-        iconSize: [26, 26],
-        iconAnchor: [13, 13],
-      });
+      const html =
+        `<div class="wind-arrow" style="transform: rotate(${toDeg}deg)">` +
+        `<svg width="22" height="22" viewBox="0 0 22 22">` +
+        `<path d="M11 19 L11 4 M6.5 9 L11 4 L15.5 9" fill="none" stroke="${C.blue}" ` +
+        `stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round"/></svg></div>`;
+      return L.divIcon({ className: "", html, iconSize: [22, 22], iconAnchor: [11, 11] });
     }
 
-    function installationIcon(clickable) {
-      return L.divIcon({
-        className: "",
-        html: `<div class="inst-icon${clickable ? " clickable" : ""}">&#9873;</div>`,
-        iconSize: [22, 22],
-        iconAnchor: [11, 20],
-      });
+    // Offshore-plattform som SVG: boretårn + dekk + bein i en rund «chip».
+    // Oljefelt (klikkbare) i orange med puls-ring; gassfelt i aqua.
+    function installationIcon(isOil) {
+      const accent = isOil ? C.orange : C.aqua;
+      const html =
+        `<div class="inst-badge${isOil ? " oil" : ""}">` +
+        `<svg width="30" height="30" viewBox="0 0 30 30">` +
+        `<circle cx="15" cy="15" r="13" fill="${C.surface}" stroke="${accent}" stroke-width="2"/>` +
+        `<g stroke="${accent}" stroke-width="1.5" fill="none" ` +
+        `stroke-linecap="round" stroke-linejoin="round">` +
+        `<path d="M15 6 L11 17 M15 6 L19 17 M12.6 10.6 H17.4 M11.9 13.8 H18.1"/>` + // boretårn
+        `<path d="M8 17 H22"/>` + // dekk
+        `<path d="M10.2 17 L9.4 22 M19.8 17 L20.6 22 M13.4 17 L13.1 22 M16.6 17 L16.9 22"/>` + // bein
+        `</g>` +
+        `<path d="M7 22.4 H23" stroke="${accent}" stroke-width="1.2" ` +
+        `stroke-dasharray="2 2" opacity="0.55"/>` + // vannlinje
+        `</svg></div>`;
+      return L.divIcon({ className: "", html, iconSize: [30, 30], iconAnchor: [15, 15] });
     }
 
     // Slug fra navn, matcher filene fra simulate_spill.py: "Aasta Hansteen" -> aasta_hansteen.
@@ -115,6 +195,7 @@
 
     // Tegner alle tidssteg 0..uptoHour. Eldre steg tegnes svakere (trail), og de
     // overlappende lagene gjør de lengst eksponerte områdene mørkere – som en skygge.
+    // Gjeldende front markeres med status-rød kant (aktivt utslipp).
     function renderSpill(uptoHour) {
       spillLayer.clearLayers();
       if (!spill) return;
@@ -125,10 +206,10 @@
         L.geoJSON(f, {
           style: {
             stroke: isCurrent,
-            color: "#000",
-            weight: isCurrent ? 1.5 : 0,
-            fillColor: "#0a0a0a",
-            fillOpacity: isCurrent ? 0.38 : 0.1,
+            color: C.critical,
+            weight: isCurrent ? 1.6 : 0,
+            fillColor: C.slick,
+            fillOpacity: isCurrent ? 0.4 : 0.1,
           },
         }).addTo(spillLayer);
       }
@@ -239,14 +320,14 @@
     const ui = {};
     const timeline = L.control({ position: "bottomleft" });
     timeline.onAdd = function () {
-      const div = L.DomUtil.create("div", "timeline idle");
+      const div = L.DomUtil.create("div", "card timeline idle");
       div.innerHTML =
         '<div class="title">Oljeutslipp – tidsakse</div>' +
         '<div class="row">' +
         '  <button class="play" title="Spill av / pause" disabled>&#9654;</button>' +
         `  <input type="range" class="slider" min="0" max="${TOTAL_HOURS}" value="0" step="1" disabled />` +
         "</div>" +
-        '<div class="readout">Klikk et oljefelt (&#9873;) for å starte.</div>';
+        '<div class="readout">Klikk et oljefelt for å starte.</div>';
       // Ikke la klikk/dra på kontrollen flytte kartet.
       L.DomEvent.disableClickPropagation(div);
       L.DomEvent.disableScrollPropagation(div);
@@ -266,14 +347,29 @@
     };
     timeline.addTo(map);
 
+    // SVG-swatch til tegnforklaringen (gjenbruker ikon-fargene).
+    function legendSwatch(type) {
+      if (type === "wind") {
+        return `<svg class="swatch" viewBox="0 0 22 22"><path d="M11 19 L11 4 M6.5 9 L11 4 L15.5 9" ` +
+          `fill="none" stroke="${C.blue}" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round"/></svg>`;
+      }
+      const accent = type === "oil" ? C.orange : C.aqua;
+      return `<svg class="swatch" viewBox="0 0 30 30"><circle cx="15" cy="15" r="12" fill="${C.surface}" ` +
+        `stroke="${accent}" stroke-width="2"/><g stroke="${accent}" stroke-width="1.6" fill="none" ` +
+        `stroke-linecap="round" stroke-linejoin="round"><path d="M15 6 L11 17 M15 6 L19 17 M12.6 10.6 H17.4"/>` +
+        `<path d="M8 17 H22"/></g></svg>`;
+    }
+
     const legend = L.control({ position: "bottomright" });
     legend.onAdd = function () {
-      const div = L.DomUtil.create("div", "legend");
+      const div = L.DomUtil.create("div", "card legend");
       div.innerHTML =
         "<b>Tegnforklaring</b>" +
-        '<span class="wind-dot">&#8593;</span> Vindstasjon (pil = dit vinden blåser)<br>' +
-        '<span class="inst-dot">&#9873;</span> Installasjon (oljefelt er klikkbare)<br>' +
-        '<span class="spill-dot">&#9632;</span> Oljeflak (mørk = eldre/lengre eksponering)';
+        `<div class="item">${legendSwatch("wind")} Vindstasjon (pil = dit vinden blåser)</div>` +
+        `<div class="item">${legendSwatch("oil")} Oljefelt (klikkbart – starter utslipp)</div>` +
+        `<div class="item">${legendSwatch("gas")} Gassfelt</div>` +
+        `<div class="item"><span class="swatch" style="background:${C.slick};opacity:0.45;` +
+        `border:1.5px solid ${C.critical};border-radius:3px"></span> Oljeflak (rød kant = front nå)</div>`;
       return div;
     };
     legend.addTo(map);
