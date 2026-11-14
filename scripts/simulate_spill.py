@@ -33,11 +33,21 @@ from shapely.affinity import rotate, scale
 from shapely.geometry import Point
 
 # --- Tidsrom ---
-SIM_HOURS = 72          # total simuleringstid (timer)
-TIME_STEP_H = 1         # ett tidssteg per time -> time 0..72 (73 steg)
+SIM_HOURS = 96          # total simuleringstid (timer)
+TIME_STEP_H = 1         # ett tidssteg per time -> time 0..96 (97 steg)
 
 # --- Driftmodell ---
-DRIFT_FACTOR = 0.03     # andel av vindhastigheten som blir driftfart (~3 %)
+# Realistisk vinddrift er ~2–4 % av vindfarten. Her er den skrudd opp til 12,5 %
+# (bevisst urealistisk) slik at flaket fra Heidrun akkurat når kysten i løpet av
+# 96 t med vind fra Træna fyr – feltene ligger ellers for langt til havs (~180+ km).
+# Sett tilbake til 0.03 for en fysisk realistisk drift.
+DRIFT_FACTOR = 0.125
+
+# Vindkilde: sett til et stasjonsnavn for å bruke én bestemt stasjon for ALLE
+# utslipp, eller None for å bruke nærmeste stasjon per installasjon.
+# Træna fyr ligger nær kysten med dominerende vind fra SV (225°), så flaket
+# driver mot NØ (45°) – inn mot land, i stedet for rett nord langs kysten.
+WIND_STATION = "Træna fyr"
 
 # --- Spredningsmodell (meter) ---
 R0 = 500.0              # startradius ved time 0
@@ -133,11 +143,13 @@ def main() -> None:
     # Bare oljefeltene får simulert oljeutslipp.
     oil_fields = installations[installations["kind"] == "oil_field"].to_crs(CRS_METRIC)
 
-    print(f"Simulerer {SIM_HOURS} t ({TIME_STEP_H} t/steg) for {len(oil_fields)} oljefelt:\n")
+    src = f"fast stasjon: {WIND_STATION}" if WIND_STATION else "nærmeste stasjon per felt"
+    print(f"Simulerer {SIM_HOURS} t ({TIME_STEP_H} t/steg) for {len(oil_fields)} oljefelt ({src}):\n")
 
     for _, inst in oil_fields.iterrows():
         name = inst["name"]
-        station = station_by_name.loc[inst["nearest_station"]]
+        station_name = WIND_STATION if WIND_STATION else inst["nearest_station"]
+        station = station_by_name.loc[station_name]
         wind_from = float(station["dominant_dir_deg"])
         wind_speed = float(station["mean_wind_speed"])
         drift_bearing = (wind_from + 180.0) % 360.0
@@ -149,7 +161,7 @@ def main() -> None:
 
         last = gdf.iloc[-1]
         print(
-            f"  {name:<10} nærmeste={inst['nearest_station']:<8} "
+            f"  {name:<10} vindkilde={station_name:<10} "
             f"vind-fra={wind_from:>5.1f}°  drift-mot={drift_bearing:>5.1f}°  "
             f"vind={wind_speed:.1f} m/s"
         )
