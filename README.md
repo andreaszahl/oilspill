@@ -29,7 +29,7 @@ Sokkeldirektoratet (FactMaps REST, NLOD)
 data/processed/installations.geojson ──► (GitHub raw-URL)
         │                                     │
         │                     notebooks/openoil_ingunn.ipynb (Google Colab)
-        │                     OpenOil + NorKyst800 (strøm) + MEPS (vind)
+        │                     OpenOil + NorKyst800 (strøm) + MEPS (vind) + WW3 (bølger)
         │                                     │
         │                         spills/*.geojson + PNG (zip → commit)
         ▼                                     ▼
@@ -102,9 +102,24 @@ Notebooken kjøres i Google Colab, ikke lokalt. Den leser `installations.geojson
 | Partikler | 2000 per innretning |
 | Strøm | NorKyst800 (met.no), 800 m, timesverdier. Strøm = 0 utenfor domenet |
 | Vind | MEPS 2,5 km (MetCoOp/met.no), første 24 t av hver 00Z-kjøring |
-| Bølger | Stokes-drift beregnet fra vinden (ingen bølgemodell) |
+| Bølger | WAVEWATCH III 4 km (met.no): Hs, periode og Stokes-drift, første 24 t av hver 00Z-kjøring |
+| Vertikal blanding | Vindbasert profil (`windspeed_Large1994`). Nedblanding fra brytende bølger (Li mfl. 2017) styres av Hs |
+| Horisontal diffusjon | 10 m²/s |
 | Forvitring | OpenOil/NOAA: fordampning, emulsjon og dispergering |
 | Land | GSHHG full oppløsning (roaring-landmask), partikler strander ved kysten |
+
+**Valg avdekket i røyktesten.** Tre standardinnstillinger i OpenOil passet dårlig for en storm i åpent
+hav og er endret:
+1. **Bølger:** Uten bølgemodell anslås Hs fra vinden med 25 km fetch. Ved 20 m/s vind ga det
+   2,2 m mot ~12 m for fullt utviklet sjø, og nesten ingen olje ble blandet ned. Nå kommer Hs og
+   Stokes-drift fra WW3.
+2. **Vertikal blanding:** NorKysts vertikale diffusivitet er 0 i overflatelaget. Blandingen beregnes
+   derfor fra vinden.
+3. **Datablokk:** `drift:max_speed = 3` m/s i stedet for 1,3. Under Ingunn drev olje raskere enn
+   standardantakelsen, og da hentet OpenDrift for lite strømdata rundt partiklene.
+
+For Norne etter 24 t endret dette massebalansen fra 37 % i overflaten og 35 % dispergert til
+18 % i overflaten og 57 % dispergert.
 
 **Flakpolygoner.** Partiklene i overflaten blir til ett polygon per time i EPSG:25833. Hver partikkel
 får en buffer på 1 km, bufferne slås sammen, og polygonet krympes med 500 m («closing»). Til slutt
@@ -135,6 +150,7 @@ skrevet nøyaktig slik de står i OpenDrifts oljeliste.
 | NOAA OilLibrary / ADIOS Oil Database via OpenDrift | Oljeegenskaper (forvitring) | CC0 1.0 ([adios_db på PyPI](https://pypi.org/project/adios-db/)) | Ikke påkrevd. Vi oppgir NOAA og SINTEF-rapporten per oljetype (tabellen over) |
 | NorKyst800 (met.no) | Havstrøm | CC BY 4.0 (står i filenes metadata) | «Based on data from MET Norway» |
 | MEPS 2,5 km (MetCoOp, met.no) | Vind | NLOD og CC BY 4.0 ([met.no: Licensing and crediting](https://www.met.no/en/free-meteorological-data/Licensing-and-crediting)) | «Based on data from MET Norway» |
+| WAVEWATCH III 4 km (met.no) | Bølgehøyde, periode og Stokes-drift | CC BY 4.0 (står i filenes metadata) | «Based on data from MET Norway» |
 | GSHHG (via roaring-landmask i OpenDrift) | Landmaske og klipping av flak | LGPL ([GSHHG](https://www.soest.hawaii.edu/pwessel/gshhg/), fra versjon 2.2.2) | Wessel, P. & Smith, W. H. F. (1996). A Global Self-consistent, Hierarchical, High-resolution Shoreline Database. *J. Geophys. Res.*, 101, 8741–8743 |
 | Kartverket | Bakgrunnskart | *(sjekkes i steg 3)* | *(kommer)* |
 

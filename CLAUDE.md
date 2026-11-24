@@ -68,9 +68,13 @@ Stegene kommuniserer via filer på disk (`data/`):
 
 4. **[notebooks/openoil_ingunn.ipynb](notebooks/openoil_ingunn.ipynb)** – kjøres kun i Colab.
    Leser innretninger og oljetyper fra raw-URL på `main` (må være pushet). Strøm: NorKyst800
-   (døgnfiler via `open_mfdataset`, `Uwind/Vwind` fjernes). Vind: MEPS 00Z-kjøringer, de første
-   24 t av hver ("beste estimat"). Readerrekkefølge `[meps, norkyst]`. Validerer oljenavn og
-   dekning før kjøring. Etterbehandling i EPSG:25833 (buffer 1 km + union + buffer −500 m, klippet
+   (døgnfiler via `open_mfdataset` med chunks `{time:1, X:150, Y:150}` – ellers 16x tregere;
+   `Uwind/Vwind` fjernes; `AKs` klippes til 1,0). Vind: MEPS, bølger: WW3 4 km – begge som
+   "beste estimat" (første 24 t av hver 00Z-kjøring); WW3s vind fjernes. Readerrekkefølge
+   `[meps, ww3, norkyst]`. OpenOil: `vertical_mixing:diffusivitymodel=windspeed_Large1994`
+   (NorKysts AKs er 0 i overflaten), `use_tabularised_stokes_drift=False` (25 km fetch gir alt
+   for lav Hs), `drift:max_speed=3`, diffusivitet via `environment:constant:horizontal_diffusivity`.
+   Resultat leses fra `o.result` (outfile feiler på Windows). Validerer oljenavn og dekning først. Etterbehandling i EPSG:25833 (buffer 1 km + union + buffer −500 m, klippet
    mot GSHHG fra roaring-landmask). Skriver `spills/<slug>.geojson` (time-polygoner med `pct_*`)
    og `spills/<slug>_stranded.geojson` (punkter) i EPSG:4326, pluss PNG og zip.
    `TESTMODUS=True` gir 6 t, 200 partikler og 2 innretninger.
