@@ -1,10 +1,11 @@
-"""Prosesserer mockdata til GeoJSON med GeoPandas (fase 1).
+"""Prosesserer mock-vinddata til GeoJSON med GeoPandas.
 
-Leser data/raw/*.csv og skriver data/processed/*.geojson (EPSG:4326):
-  - wind_stations.geojson : dominerende vindretning, middelvind og andel per stasjon.
-  - installations.geojson : hver installasjon med nærmeste stasjon og avstand.
+Leser data/raw/wind_observations.csv og skriver
+data/processed/wind_stations.geojson (EPSG:4326) med dominerende vindretning,
+middelvind og andel per stasjon. Laget er bakgrunn i kartet.
 
-Avstand beregnes i EPSG:25833 (UTM 33N, meter), som er egnet for Norge.
+Installasjonene behandles ikke her lenger. De hentes fra Sokkeldirektoratet av
+scripts/fetch_facilities.py.
 """
 
 from __future__ import annotations
@@ -60,7 +61,6 @@ def dominant_wind_per_station(obs: pd.DataFrame) -> pd.DataFrame:
 def main() -> None:
     PROCESSED_DIR.mkdir(parents=True, exist_ok=True)
 
-    # --- Stasjoner ---
     obs = pd.read_csv(RAW_DIR / "wind_observations.csv")
     stations_df = dominant_wind_per_station(obs)
     stations = gpd.GeoDataFrame(
@@ -69,37 +69,9 @@ def main() -> None:
         crs="EPSG:4326",
     )
 
-    # --- Installasjoner ---
-    inst_df = pd.read_csv(RAW_DIR / "installations.csv")
-    installations = gpd.GeoDataFrame(
-        inst_df,
-        geometry=gpd.points_from_xy(inst_df["lon"], inst_df["lat"]),
-        crs="EPSG:4326",
-    )
-
-    # --- Nærmeste stasjon per installasjon (meter i EPSG:25833) ---
-    stations_m = stations.to_crs(25833)
-    inst_m = installations.to_crs(25833)
-    nearest = gpd.sjoin_nearest(
-        inst_m,
-        stations_m[["name", "geometry"]].rename(columns={"name": "nearest_station"}),
-        distance_col="dist_m",
-    )
-    # sjoin_nearest kan gi duplikater ved likt minimum; behold første per installasjon.
-    nearest = nearest[~nearest.index.duplicated(keep="first")]
-    installations["nearest_station"] = nearest["nearest_station"].to_numpy()
-    installations["dist_km"] = (nearest["dist_m"].to_numpy() / 1000).round(1)
-
-    # --- Eksport (EPSG:4326) ---
     stations_out = PROCESSED_DIR / "wind_stations.geojson"
-    inst_out = PROCESSED_DIR / "installations.geojson"
-    stations.to_crs(4326).to_file(stations_out, driver="GeoJSON")
-    installations.to_crs(4326).to_file(inst_out, driver="GeoJSON")
-
+    stations.to_file(stations_out, driver="GeoJSON")
     print(f"Skrev {len(stations)} stasjoner -> {stations_out}")
-    print(f"Skrev {len(installations)} installasjoner -> {inst_out}")
-    for _, r in installations.iterrows():
-        print(f"  {r['name']:<16} nærmeste: {r['nearest_station']:<16} ({r['dist_km']} km)")
 
 
 if __name__ == "__main__":

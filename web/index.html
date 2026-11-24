@@ -295,25 +295,22 @@
         },
       }).addTo(map);
 
+      // Ekte innretninger fra Sokkeldirektoratet (scripts/fetch_facilities.py).
+      // Klikk-for-utslipp kobles på igjen i steg 3, når OpenOil-resultatene finnes.
       L.geoJSON(installations, {
-        pointToLayer: (feature, latlng) =>
-          L.marker(latlng, { icon: installationIcon(feature.properties.kind === "oil_field") }),
+        pointToLayer: (feature, latlng) => L.marker(latlng, { icon: installationIcon(false) }),
         onEachFeature: (feature, layer) => {
           const p = feature.properties;
-          const isOil = p.kind === "oil_field";
-          const info =
+          layer.bindTooltip(p.name);
+          layer.bindPopup(
             `<b>${p.name}</b><br>` +
-            `Type: ${p.kind}<br>` +
-            `Operatør: ${p.operator}<br>` +
-            `Nærmeste stasjon: ${p.nearest_station} (${p.dist_km} km)`;
-          if (isOil) {
-            // Oljefelt: hover-tooltip for info, klikk starter utslipp. Ingen popup,
-            // så den ikke dekker oljeflaket som tegnes ved installasjonen.
-            layer.bindTooltip(`${p.name} – klikk for oljeutslipp`);
-            layer.on("click", () => startSpill(p.name));
-          } else {
-            layer.bindPopup(info);
-          }
+              `Felt: ${p.field}<br>` +
+              `Type: ${p.facility_kind}<br>` +
+              `Funksjon: ${p.functions}<br>` +
+              `Operatør: ${p.operator}<br>` +
+              `Havdyp: ${p.water_depth_m} m<br>` +
+              `<a href="${p.factpage_url}" target="_blank" rel="noopener">Faktaside (Sokkeldirektoratet)</a>`
+          );
         },
       }).addTo(map);
     }
@@ -368,10 +365,7 @@
       div.innerHTML =
         "<b>Tegnforklaring</b>" +
         `<div class="item">${legendSwatch("wind")} Vindstasjon (pil = dit vinden blåser)</div>` +
-        `<div class="item">${legendSwatch("oil")} Oljefelt (klikkbart – starter utslipp)</div>` +
-        `<div class="item">${legendSwatch("gas")} Gassfelt</div>` +
-        `<div class="item"><span class="swatch" style="background:${C.slick};opacity:0.45;` +
-        `border:1.5px solid ${C.critical};border-radius:3px"></span> Oljeflak (rød kant = front nå)</div>`;
+        `<div class="item">${legendSwatch("gas")} Produksjonsinnretning (Sokkeldirektoratet)</div>`;
       return div;
     };
     legend.addTo(map);

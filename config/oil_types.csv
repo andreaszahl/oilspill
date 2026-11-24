@@ -1,0 +1,9 @@
+field,oil_type,sintef_ref,note
+Norne,NORNE BLEND 2010,SINTEF A16808,
+Heidrun,HEIDRUN EXPORT BLEND 2004,STF80 A04009,
+Skarv,SKARV 2004,STF66 A04027,
+Åsgard,AASGARD A 2003,STF66 A03053,
+Kristin,KRISTIN 2006,STF80MK A06221,
+Njord,NJORD 1997,STF66 F97073,"Samme SINTEF-rapport som «NJORD 2002» på opendrift.github.io/oil_types.html, men oljen heter NJORD 1997 i OpenDrift 1.14.x (pip)."
+Draugen,DRAUGEN 2008,SINTEF A5637,
+Aasta Hansteen,SKARV KONDENSAT 2014,SINTEF A26022,"Stedfortreder. Feltet har ingen egen olje i lista. Gass/kondensat-felt, så et kondensat er valgt."

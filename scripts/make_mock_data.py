@@ -1,11 +1,11 @@
-"""Genererer fiktive vinddata og installasjoner for fase 1.
+"""Genererer fiktive vinddata for bakgrunnslaget i kartet.
 
-Skriver to filer til data/raw/:
-  - wind_observations.csv : timesobservasjoner for ett år for 9 fiktive
-    målestasjoner langs Nordlandskysten.
-  - installations.csv      : fire offshore-installasjoner (omtrentlige posisjoner).
+Skriver data/raw/wind_observations.csv: timesobservasjoner for ett år for 9
+fiktive målestasjoner langs Nordlandskysten.
 
 Dataene er helt fiktive, men bruker fast seed slik at resultatet er reproduserbart.
+Installasjonene er ekte og hentes av fetch_facilities.py (Sokkeldirektoratet).
+Vinden i oljedriftsimuleringene kommer fra MEPS (met.no), ikke herfra.
 """
 
 from __future__ import annotations
@@ -33,14 +33,6 @@ STATIONS = [
     {"station_id": "NL07", "name": "Vega",             "lat": 65.67, "lon": 11.90, "dominant_dir": 190},  # S
     {"station_id": "NL08", "name": "Lovund",           "lat": 66.36, "lon": 12.37, "dominant_dir": 235},  # SV
     {"station_id": "NL09", "name": "Værøy",            "lat": 67.66, "lon": 12.69, "dominant_dir": 270},  # V
-]
-
-# Fire installasjoner (omtrentlige posisjoner).
-INSTALLATIONS = [
-    {"name": "Norne",          "kind": "oil_field", "operator": "Equinor",   "lat": 66.02, "lon": 8.08},
-    {"name": "Skarv",          "kind": "gas_field", "operator": "Aker BP",   "lat": 65.75, "lon": 7.65},
-    {"name": "Aasta Hansteen", "kind": "gas_field", "operator": "Equinor",   "lat": 67.07, "lon": 7.02},
-    {"name": "Heidrun",        "kind": "oil_field", "operator": "Equinor",   "lat": 65.33, "lon": 7.32},
 ]
 
 
@@ -76,12 +68,7 @@ def main() -> None:
     obs_path = RAW_DIR / "wind_observations.csv"
     obs.to_csv(obs_path, index=False)
 
-    inst = pd.DataFrame(INSTALLATIONS)
-    inst_path = RAW_DIR / "installations.csv"
-    inst.to_csv(inst_path, index=False)
-
     print(f"Skrev {len(obs):,} observasjoner for {obs['station_id'].nunique()} stasjoner -> {obs_path}")
-    print(f"Skrev {len(inst)} installasjoner -> {inst_path}")
 
 
 if __name__ == "__main__":
