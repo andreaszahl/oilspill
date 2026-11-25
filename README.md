@@ -121,8 +121,10 @@ hav og er endret:
 For Norne etter 24 t endret dette massebalansen fra 37 % i overflaten og 35 % dispergert til
 18 % i overflaten og 57 % dispergert.
 
-**Flakpolygoner.** Partiklene i overflaten blir til ett polygon per time i EPSG:25833. Hver partikkel
-får en buffer på 1 km, bufferne slås sammen, og polygonet krympes med 500 m («closing»). Til slutt
+**Flakpolygoner.** Partiklene i overflaten blir til ett polygon per time i EPSG:25833. Bare partikler
+som fortsatt har minst 1 % av sin opprinnelige oljemasse, blir med. Ellers ville partikler som har
+mistet nesten all oljen til fordampning og dispergering, tegnet store flak uten olje. Uten filteret
+fikk Kristin 532 km² flak med 0,0 % olje i overflaten. Hver partikkel får en buffer på 1 km, bufferne slås sammen, og polygonet krympes med 500 m («closing»). Til slutt
 klippes det mot GSHHG-land. Metoden bygger ikke bro over øyer og sund, og flekker som har skilt lag,
 forblir egne polygoner. Arealet avhenger av bufferradien og er et mål på utbredelse, ikke på areal
 dekket av olje.
