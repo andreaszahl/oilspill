@@ -174,10 +174,20 @@ skrevet nøyaktig slik de står i OpenDrifts oljeliste.
 
 ## 7. Lisens for egen kode
 
-Forslag: **MIT** for all egen kode, også notebooken. MIT er forenlig med GPL-2.0. Repoet distribuerer
-ikke OpenDrift; den installeres med pip i Colab. GPL-kravene gjelder den som distribuerer OpenDrift,
-alene eller i en samlet pakke. Notebooken importerer bare biblioteket. *(Dette er ikke juridisk råd.)*
-OpenDrift er en ekstern avhengighet under GPL-2.0. *(LICENSE-fil legges til når du har bestemt deg.)*
+Egen kode er lisensiert under **MIT** ([LICENSE](LICENSE)). Det gjelder skriptene i `scripts/`, notebooken
+og webkartet.
+
+**Data er ikke omfattet av MIT.** Filene i `data/` og resultatene i `data/processed/spills/` bygger på
+data fra Sokkeldirektoratet (NLOD 2.0) og MET Norway (CC BY 4.0). De følger lisensene og
+krediteringskravene i avsnitt 6. Det samme gjelder bakgrunnskartet fra Kartverket.
+
+**OpenDrift (GPL-2.0).** Simuleringen bruker OpenDrift/OpenOil fra Meteorologisk institutt, som er
+lisensiert under [GNU General Public License versjon 2](https://github.com/OpenDrift/opendrift/blob/master/LICENSE).
+OpenDrift er ikke inkludert i dette repoet. Notebooken installerer den med `pip` i Colab og importerer
+den. GPL-kravene, som å gi videre kildekode under samme lisens, gjelder den som distribuerer OpenDrift,
+alene eller sammen med annen kode. MIT er forenlig med GPL-2.0. Hvis noen pakker notebooken sammen med
+OpenDrift og distribuerer helheten, kan helheten derfor lisensieres under GPL-2.0. Den som bruker
+resultatene, bør sitere Dagestad mfl. (2018) (se avsnitt 6). *(Dette er ikke juridisk råd.)*
 
 ## 8. Begrensninger
 

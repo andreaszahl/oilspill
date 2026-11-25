@@ -3,6 +3,8 @@ name = "kartapp"
 version = "0.1.0"
 description = "Add your description here"
 readme = "README.md"
+license = "MIT"
+license-files = ["LICENSE"]
 authors = [
     { name = "andreaszahl", email = "andreas.kristiansen@bouvet.no" }
 ]
