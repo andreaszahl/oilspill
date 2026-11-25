@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Kartapp – Vind, installasjoner og oljeutslipp</title>
+  <title>Oljedrift under ekstremværet «Ingunn»</title>
 
   <link
     rel="stylesheet"
@@ -21,41 +21,38 @@
       --muted: #898781;     /* dempet (labels) */
       --border: rgba(11, 11, 11, 0.10);
       --grid: #e1e0d9;
-      --blue: #2a78d6;      /* series 1 – vind */
-      --orange: #eb6834;    /* series 2 – oljefelt */
-      --aqua: #1baf7a;      /* series 3 – gassfelt */
-      --critical: #d03b3b;  /* status – aktiv utslippsfront */
+      --orange: #eb6834;    /* innretninger og kontroller */
       --font: system-ui, -apple-system, "Segoe UI", sans-serif;
     }
 
     html, body { margin: 0; height: 100%; background: var(--page); }
     #map { height: 100vh; background: var(--page); }
 
-    /* Vindpil: SVG-pil som roteres etter dominerende retning, med hvit glorie. */
+    /* Vindpil (fiktive stasjoner): dempet grå, så den ikke konkurrerer med modelldataene. */
     .wind-arrow {
       width: 22px; height: 22px;
       filter: drop-shadow(0 0 1px #fff) drop-shadow(0 0 1px #fff);
     }
 
-    /* Installasjons-ikon: SVG-plattform i en «chip» med kant og skygge. */
+    /* Innretnings-ikon: SVG-plattform i en «chip» med kant og skygge. */
     .inst-badge {
-      position: relative; width: 30px; height: 30px; display: block;
+      position: relative; width: 30px; height: 30px; display: block; cursor: pointer;
       filter: drop-shadow(0 1px 2px rgba(11, 11, 11, 0.28));
     }
-    .inst-badge.oil { cursor: pointer; }
-    /* Puls-ring signaliserer at oljefeltet er klikkbart (utslippskilde). */
-    .inst-badge.oil::after {
+    /* Puls-ring signaliserer at innretningen er klikkbar (utslippskilde). */
+    .inst-badge::after {
       content: ""; position: absolute; left: 2px; top: 2px;
       width: 26px; height: 26px; border-radius: 50%;
       animation: pulse 2.2s ease-out infinite;
     }
+    .inst-badge.selected::after { animation: none; box-shadow: 0 0 0 3px var(--ink); }
     @keyframes pulse {
       0%   { box-shadow: 0 0 0 0 rgba(235, 104, 52, 0.45); }
       70%  { box-shadow: 0 0 0 10px rgba(235, 104, 52, 0); }
       100% { box-shadow: 0 0 0 0 rgba(235, 104, 52, 0); }
     }
 
-    /* Felles kort-stil for kontroller (legend + tidsakse). */
+    /* Felles kort-stil for kontroller (infoboks, legend og tidsakse). */
     .card {
       background: var(--surface);
       color: var(--ink-2);
@@ -65,20 +62,26 @@
       box-shadow: 0 2px 10px rgba(11, 11, 11, 0.12);
       font: 13px/1.45 var(--font);
     }
+    .card .title { font-weight: 600; color: var(--ink); margin-bottom: 6px;
+      font-size: 12px; letter-spacing: 0.02em; text-transform: uppercase; }
+    .card b { color: var(--ink); }
+    .card a { color: var(--ink-2); }
 
-    .legend b { display: block; color: var(--ink); margin-bottom: 6px; font-size: 12px;
-      letter-spacing: 0.02em; text-transform: uppercase; }
+    .info { width: 320px; max-height: calc(100vh - 40px); overflow-y: auto; }
+    .info p { margin: 0 0 6px; }
+    .info .facts { margin: 6px 0; display: grid; grid-template-columns: auto 1fr; gap: 1px 10px; }
+    .info .facts dt { color: var(--muted); }
+    .info .facts dd { margin: 0; }
+    .info .note { color: var(--muted); font-size: 12px; }
+
     .legend .item { display: flex; align-items: center; gap: 8px; margin: 3px 0; }
     .legend .swatch { width: 14px; height: 14px; flex: none; display: inline-block; }
 
-    .timeline { width: 300px; }
-    .timeline .title { font-weight: 600; color: var(--ink); margin-bottom: 8px;
-      font-size: 12px; letter-spacing: 0.02em; text-transform: uppercase; }
+    .timeline { width: 340px; }
     .timeline .row { display: flex; align-items: center; gap: 10px; }
-    .timeline .readout { margin-top: 8px; color: var(--ink-2);
-      font-variant-numeric: tabular-nums; }
-    .timeline .readout b { color: var(--ink); }
+    .timeline .readout { margin-top: 8px; font-variant-numeric: tabular-nums; }
     .timeline.idle .readout { color: var(--muted); }
+    .timeline .when { color: var(--ink); font-weight: 600; }
 
     .timeline button {
       width: 36px; height: 32px; flex: none;
@@ -109,10 +112,17 @@
     .timeline input[type="range"]:disabled { opacity: 0.5; }
     .timeline input[type="range"]:disabled::-webkit-slider-thumb { background: var(--muted); }
 
-    /* Leaflet-popup i samme stil. */
-    .leaflet-popup-content-wrapper { border-radius: 10px; }
-    .leaflet-popup-content { font: 13px/1.45 var(--font); color: var(--ink-2); }
-    .leaflet-popup-content b { color: var(--ink); }
+    /* Massebalanse: stablet stolpe (100 %) med 2 px mellomrom mellom segmentene. */
+    .budget { margin-top: 8px; }
+    .budget .bar { display: flex; gap: 2px; height: 12px; border-radius: 4px; overflow: hidden;
+      background: var(--grid); }
+    .budget .bar span { min-width: 0; flex-basis: 0; }
+    .budget .keys { margin-top: 6px; display: grid; grid-template-columns: 1fr 1fr; gap: 2px 12px; }
+    .budget .key { display: flex; align-items: center; gap: 6px; }
+    .budget .key i { width: 10px; height: 10px; border-radius: 2px; flex: none; }
+    .budget .key .v { margin-left: auto; color: var(--ink); font-variant-numeric: tabular-nums; }
+
+    .leaflet-tooltip { font: 12px/1.4 var(--font); }
   </style>
 </head>
 <body>
@@ -124,101 +134,168 @@
     crossorigin=""
   ></script>
   <script>
-    // Palett-verdier for SVG-ikoner (samme roller som CSS-variablene over).
+    // ---- Konstanter ----
+    const DATA = "../data/processed";      // relativ sti: virker lokalt og under /oilspill/web/
+    const CONFIG = "../config";
+    const STROM_KILDE = "NorKyst800";
+    const VIND_KILDE = "MEPS 2,5 km (MetCoOp/met.no)";
+    const BOLGE_KILDE = "WAVEWATCH III 4 km (met.no)";
+    const MIN_STRANDET_KG = 1;             // strandede partikler med mindre olje vises ikke
+    const STEP_MS = 180;                   // avspillingsfart: ms per modelltime
+
+    // Palett-verdier for SVG og kartlag (samme roller som CSS-variablene over).
     const C = {
       surface: "#fcfcfb",
-      blue: "#2a78d6",
+      ink: "#0b0b0b",
+      muted: "#898781",
       orange: "#eb6834",
-      aqua: "#1baf7a",
-      critical: "#d03b3b",
-      slick: "#0b0b0b",
     };
 
-    const map = L.map("map").setView([66.3, 10.5], 7);
+    // Massebalansen: kategoriske fargeplasser 1–5 i fast rekkefølge (validert, dataviz-skillen).
+    const BUDGET = [
+      { key: "pct_surface",    label: "Overflate",        color: "#2a78d6" },
+      { key: "pct_submerged",  label: "Under overflaten", color: "#eb6834" },
+      { key: "pct_evaporated", label: "Fordampet",        color: "#1baf7a" },
+      { key: "pct_dispersed",  label: "Dispergert",       color: "#eda100" },
+      { key: "pct_stranded",   label: "Strandet",         color: "#e87ba4" },
+    ];
+    const STRANDED_COLOR = BUDGET[4].color;
 
-    // Dempet lyst grunnkart (Esri Light Gray Canvas) – ren flate uten API-nøkkel
-    // som lar dataene stå frem.
+    // Norsk tid (CET om vinteren, UTC+1). time_utc i dataene er ISO 8601 i UTC.
+    const fmtTid = new Intl.DateTimeFormat("nb-NO", {
+      timeZone: "Europe/Oslo", weekday: "short", day: "numeric", month: "short",
+      hour: "2-digit", minute: "2-digit",
+    });
+    const fmtTall = new Intl.NumberFormat("nb-NO", { maximumFractionDigits: 1 });
+    const norskTid = (iso) => fmtTid.format(new Date(iso));
+    // Små, men ikke-null andeler skal ikke se ut som 0 (f.eks. litt strandet olje).
+    const fmtPct = (v) => (v > 0 && v < 0.05 ? "< 0,1 %" : `${fmtTall.format(v)} %`);
+
+    // ---- Kart og bakgrunn ----
+    // Kartverkets gråtonekart (CC BY 4.0). Begrenset til zoom 11: nivå 12–20 bygger på
+    // Geovekst-data som Kartverket ikke har alle rettigheter til (se README).
+    const map = L.map("map", { maxZoom: 11, minZoom: 5 }).setView([65.6, 9.5], 7);
     L.tileLayer(
-      "https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Light_Gray_Base/MapServer/tile/{z}/{y}/{x}",
+      "https://cache.kartverket.no/v1/wmts/1.0.0/topograatone/default/webmercator/{z}/{y}/{x}.png",
       {
-        maxZoom: 16,
-        attribution:
-          'Tiles &copy; Esri &mdash; Esri, DeLorme, NAVTEQ ' +
-          '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>-bidragsytere',
+        maxZoom: 11,
+        attribution: '&copy; <a href="https://www.kartverket.no/" target="_blank" rel="noopener">Kartverket</a>',
       }
     ).addTo(map);
+    map.attributionControl.addAttribution(
+      'Innretninger: <a href="https://www.sodir.no/" target="_blank" rel="noopener">Sokkeldirektoratet</a> (NLOD)'
+    );
+    map.attributionControl.addAttribution(
+      'Strøm, vind, bølger: <a href="https://www.met.no/" target="_blank" rel="noopener">MET Norway</a> (CC BY 4.0)'
+    );
+
+    // Lerret i stedet for SVG for flak og strandingspunkter: raskere med tusenvis av objekter.
+    const canvas = L.canvas({ padding: 0.5 });
 
     // Pilen peker DIT vinden blåser. dominant_dir_deg er retningen vinden kommer
-    // FRA, så vi legger til 180 grader. SVG gir skarp rotasjon i alle vinkler.
+    // FRA, så vi legger til 180 grader.
     function windArrowIcon(fromDeg) {
       const toDeg = (fromDeg + 180) % 360;
       const html =
         `<div class="wind-arrow" style="transform: rotate(${toDeg}deg)">` +
         `<svg width="22" height="22" viewBox="0 0 22 22">` +
-        `<path d="M11 19 L11 4 M6.5 9 L11 4 L15.5 9" fill="none" stroke="${C.blue}" ` +
+        `<path d="M11 19 L11 4 M6.5 9 L11 4 L15.5 9" fill="none" stroke="${C.muted}" ` +
         `stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round"/></svg></div>`;
       return L.divIcon({ className: "", html, iconSize: [22, 22], iconAnchor: [11, 11] });
     }
 
     // Offshore-plattform som SVG: boretårn + dekk + bein i en rund «chip».
-    // Oljefelt (klikkbare) i orange med puls-ring; gassfelt i aqua.
-    function installationIcon(isOil) {
-      const accent = isOil ? C.orange : C.aqua;
+    function installationIcon(selected) {
+      const a = C.orange;
       const html =
-        `<div class="inst-badge${isOil ? " oil" : ""}">` +
+        `<div class="inst-badge${selected ? " selected" : ""}">` +
         `<svg width="30" height="30" viewBox="0 0 30 30">` +
-        `<circle cx="15" cy="15" r="13" fill="${C.surface}" stroke="${accent}" stroke-width="2"/>` +
-        `<g stroke="${accent}" stroke-width="1.5" fill="none" ` +
-        `stroke-linecap="round" stroke-linejoin="round">` +
+        `<circle cx="15" cy="15" r="13" fill="${C.surface}" stroke="${a}" stroke-width="2"/>` +
+        `<g stroke="${a}" stroke-width="1.5" fill="none" stroke-linecap="round" stroke-linejoin="round">` +
         `<path d="M15 6 L11 17 M15 6 L19 17 M12.6 10.6 H17.4 M11.9 13.8 H18.1"/>` + // boretårn
         `<path d="M8 17 H22"/>` + // dekk
         `<path d="M10.2 17 L9.4 22 M19.8 17 L20.6 22 M13.4 17 L13.1 22 M16.6 17 L16.9 22"/>` + // bein
         `</g>` +
-        `<path d="M7 22.4 H23" stroke="${accent}" stroke-width="1.2" ` +
-        `stroke-dasharray="2 2" opacity="0.55"/>` + // vannlinje
+        `<path d="M7 22.4 H23" stroke="${a}" stroke-width="1.2" stroke-dasharray="2 2" opacity="0.55"/>` +
         `</svg></div>`;
       return L.divIcon({ className: "", html, iconSize: [30, 30], iconAnchor: [15, 15] });
     }
 
-    // Slug fra navn, matcher filene fra simulate_spill.py: "Aasta Hansteen" -> aasta_hansteen.
-    const slugify = (name) => name.trim().toLowerCase().replace(/\s+/g, "_");
+    // Enkel CSV-leser med støtte for felt i anførselstegn (config/oil_types.csv har komma i merknadene).
+    function parseCsv(text) {
+      const rows = [];
+      let row = [], field = "", quoted = false;
+      for (let i = 0; i < text.length; i++) {
+        const c = text[i];
+        if (quoted) {
+          if (c === '"' && text[i + 1] === '"') { field += '"'; i++; }
+          else if (c === '"') quoted = false;
+          else field += c;
+        } else if (c === '"') quoted = true;
+        else if (c === ",") { row.push(field); field = ""; }
+        else if (c === "\n" || c === "\r") {
+          if (c === "\r" && text[i + 1] === "\n") i++;
+          row.push(field); rows.push(row); row = []; field = "";
+        } else field += c;
+      }
+      if (field || row.length) { row.push(field); rows.push(row); }
+      const [head, ...body] = rows.filter((r) => r.some((v) => v !== ""));
+      return body.map((r) => Object.fromEntries(head.map((h, i) => [h, r[i] ?? ""])));
+    }
 
-    // ---- Oljeutslipp + tidsakse ----
-    const TOTAL_HOURS = 96;        // samme som SIM_HOURS i simulate_spill.py
-    const STEP_MS = 180;           // avspillingsfart: ms per time
-
+    // ---- Tilstand ----
     const spillLayer = L.layerGroup().addTo(map);
-    let spill = null;              // { name, byHour[], maxHour }
+    let spill = null;      // { inst, oil, hours[], maxHour, slickLayers[], strandLayers[] }
     let hour = 0;
     let playing = false;
     let timer = null;
+    let oilByField = {};
+    const markers = {};    // slug -> Leaflet-markør
+    let selectedSlug = null;
 
-    // Tegner alle tidssteg 0..uptoHour. Eldre steg tegnes svakere (trail), og de
-    // overlappende lagene gjør de lengst eksponerte områdene mørkere – som en skygge.
-    // Gjeldende front markeres med status-rød kant (aktivt utslipp).
-    function renderSpill(uptoHour) {
-      spillLayer.clearLayers();
+    const STYLE_NOW = { stroke: true, color: C.ink, weight: 1.2, fillColor: C.ink, fillOpacity: 0.35 };
+    const STYLE_TRAIL = { stroke: false, fillColor: C.ink, fillOpacity: 0.05 };
+
+    // Tegner flaket for gjeldende time og et svakt spor av tidligere timer. Strandet
+    // olje vises kumulativt: hvert punkt er en partikkel som traff land ved eller før timen.
+    function renderSpill(upto) {
       if (!spill) return;
-      for (let h = 0; h <= uptoHour; h++) {
-        const f = spill.byHour[h];
-        if (!f) continue;
-        const isCurrent = h === uptoHour;
-        L.geoJSON(f, {
-          style: {
-            stroke: isCurrent,
-            color: C.critical,
-            weight: isCurrent ? 1.6 : 0,
-            fillColor: C.slick,
-            fillOpacity: isCurrent ? 0.4 : 0.1,
-          },
-        }).addTo(spillLayer);
+      for (let h = 0; h <= spill.maxHour; h++) {
+        for (const [layer, style] of [[spill.slickLayers[h], h === upto ? STYLE_NOW : STYLE_TRAIL],
+                                      [spill.strandLayers[h], null]]) {
+          if (!layer) continue;
+          if (h <= upto) {
+            if (!spillLayer.hasLayer(layer)) spillLayer.addLayer(layer);
+            if (style) layer.setStyle(style);
+          } else if (spillLayer.hasLayer(layer)) {
+            spillLayer.removeLayer(layer);
+          }
+        }
       }
-      const props = spill.byHour[uptoHour] ? spill.byHour[uptoHour].properties : null;
-      const area = props ? props.area_km2 : 0;
-      ui.slider.value = uptoHour;
+      // Gjeldende flak øverst, strandingspunktene over det.
+      spill.slickLayers[upto]?.bringToFront();
+      spill.strandLayers.forEach((l, h) => { if (l && h <= upto) l.eachLayer((m) => m.bringToFront()); });
+      renderReadout(upto);
+    }
+
+    function renderReadout(upto) {
+      const p = spill.hours[upto];
+      ui.slider.value = upto;
+      if (!p) { ui.readout.textContent = `Ingen data for time ${upto}.`; return; }
+      const areal = p.area_km2 > 0 ? `${fmtTall.format(p.area_km2)} km²` : "ingen flak";
+      const total = BUDGET.reduce((s, b) => s + p[b.key], 0) || 1;
+      const segs = BUDGET.filter((b) => p[b.key] > 0)
+        .map((b) => `<span style="flex-grow:${p[b.key] / total};background:${b.color}" ` +
+                    `title="${b.label}: ${fmtPct(p[b.key])}"></span>`).join("");
+      const keys = BUDGET.map((b) =>
+        `<div class="key"><i style="background:${b.color}"></i>${b.label}` +
+        `<span class="v">${fmtPct(p[b.key])}</span></div>`).join("");
       ui.readout.innerHTML =
-        `<b>${spill.name}</b> &middot; Time: <b>${uptoHour}</b> / ${spill.maxHour} ` +
-        `&middot; Areal: <b>${area.toFixed(1)}</b> km²`;
+        `<div><b>${spill.inst.name}</b> &middot; time ${upto} av ${spill.maxHour}</div>` +
+        `<div class="when">${norskTid(p.time_utc)} (norsk tid)</div>` +
+        `<div>Flak i overflaten: <b>${areal}</b></div>` +
+        `<div class="budget"><div class="bar" role="img" aria-label="Massebalanse">${segs}</div>` +
+        `<div class="keys">${keys}</div></div>`;
     }
 
     function pause() {
@@ -233,86 +310,162 @@
       playing = true;
       ui.playBtn.innerHTML = "&#10073;&#10073;"; // ❚❚
       timer = setInterval(() => {
-        hour += 1;
-        if (hour >= spill.maxHour) {
-          hour = spill.maxHour;
-          renderSpill(hour);
-          pause();
-          return;
-        }
+        hour = Math.min(hour + 1, spill.maxHour);
         renderSpill(hour);
+        if (hour >= spill.maxHour) pause();
       }, STEP_MS);
     }
 
-    async function startSpill(name) {
+    const getJson = (url) => fetch(url, { cache: "no-store" }).then((r) => {
+      if (!r.ok) throw new Error(`${r.status} ${url}`);
+      return r.json();
+    });
+
+    async function startSpill(inst) {
       pause();
-      let fc;
+      let fc, stranded;
       try {
-        fc = await fetch(`../data/processed/spills/${slugify(name)}.geojson`, {
-          cache: "no-store", // alltid friske data etter ny simulering
-        }).then((r) => {
-          if (!r.ok) throw new Error(r.status);
-          return r.json();
-        });
+        [fc, stranded] = await Promise.all([
+          getJson(`${DATA}/spills/${inst.slug}.geojson`),
+          getJson(`${DATA}/spills/${inst.slug}_stranded.geojson`),
+        ]);
       } catch (e) {
-        alert(`Fant ikke utslippsdata for ${name}. Kjør scripts/simulate_spill.py.`);
+        console.error(e);
+        alert(`Fant ikke utslippsdata for ${inst.name}. Kjør notebooken og legg spills/ i data/processed/.`);
         return;
       }
-      const byHour = [];
+
+      // Én lagstruktur per time, bygget én gang, slik at avspillingen bare slår lag av og på.
+      const hours = [], slickLayers = [], strandLayers = [];
       let maxHour = 0;
       fc.features.forEach((f) => {
-        byHour[f.properties.hour] = f;
-        maxHour = Math.max(maxHour, f.properties.hour);
+        const h = f.properties.hour;
+        hours[h] = f.properties;
+        maxHour = Math.max(maxHour, h);
+        if (f.geometry && f.properties.area_km2 > 0) {
+          slickLayers[h] = L.geoJSON(f, { renderer: canvas, interactive: false, style: STYLE_TRAIL });
+        }
       });
-      spill = { name, byHour, maxHour };
+      const vist = stranded.features.filter((f) => f.properties.mass_kg >= MIN_STRANDET_KG);
+      vist.forEach((f) => {
+        const p = f.properties;
+        const [lon, lat] = f.geometry.coordinates;
+        const m = L.circleMarker([lat, lon], {
+          renderer: canvas, radius: 3.5, weight: 1, color: C.surface,
+          fillColor: STRANDED_COLOR, fillOpacity: 0.9,
+        }).bindTooltip(`Strandet ${norskTid(p.time_utc)}<br>${fmtTall.format(p.mass_kg)} kg olje`);
+        (strandLayers[p.hour] ??= L.layerGroup()).addLayer(m);
+      });
+
+      spillLayer.clearLayers();
+      spill = { inst, oil: oilByField[inst.field] || {}, hours, maxHour, slickLayers, strandLayers };
+      selectInstallation(inst.slug);
+      renderInfo(inst, fc, stranded.features.length - vist.length);
+
+      // Zoom til hele forløpet (alle flak + strandet olje + innretningen).
+      const b = L.latLngBounds([[inst.lat, inst.lon]]);
+      slickLayers.forEach((l) => l && b.extend(l.getBounds()));
+      vist.forEach((f) => b.extend([f.geometry.coordinates[1], f.geometry.coordinates[0]]));
+      map.fitBounds(b, { paddingTopLeft: [40, 40], paddingBottomRight: [360, 40], maxZoom: 9 });
+
       hour = 0;
       ui.root.classList.remove("idle");
       ui.playBtn.disabled = false;
       ui.slider.disabled = false;
       ui.slider.max = maxHour;
       renderSpill(0);
-      play(); // start avspilling automatisk når et felt velges
+      play(); // start avspilling automatisk når en innretning velges
+    }
+
+    function selectInstallation(slug) {
+      if (selectedSlug && markers[selectedSlug]) markers[selectedSlug].setIcon(installationIcon(false));
+      selectedSlug = slug;
+      markers[slug].setIcon(installationIcon(true));
+    }
+
+    // ---- Infoboks (øverst til høyre) ----
+    const info = L.control({ position: "topright" });
+    info.onAdd = function () {
+      const div = L.DomUtil.create("div", "card info");
+      L.DomEvent.disableClickPropagation(div);
+      L.DomEvent.disableScrollPropagation(div);
+      div.innerHTML =
+        '<div class="title">Oljedrift under ekstremværet «Ingunn»</div>' +
+        "<p>Klikk en produksjonsinnretning for å se et <b>hypotetisk</b> utslipp på 500 m³/t i 12 timer " +
+        "fra 31. januar 2024, simulert i 72 timer med OpenDrift/OpenOil.</p>" +
+        '<p class="note">Ikke et beredskapsverktøy. Emneoppgave i Geografisk IT og KI, UiA.</p>';
+      info.div = div;
+      return div;
+    };
+    info.addTo(map);
+
+    function renderInfo(inst, fc, skjulte) {
+      const oil = spill.oil;
+      const oljetype = fc.features[0]?.properties.oil_type || oil.oil_type || "ukjent";
+      const fmtStart = norskTid(fc.features[0].properties.time_utc);
+      info.div.innerHTML =
+        `<div class="title">${inst.name}</div>` +
+        `<p>Hypotetisk utslipp simulert med OpenDrift/OpenOil (met.no) under ekstremværet Ingunn. ` +
+        `Strøm: ${STROM_KILDE}. Vind: ${VIND_KILDE}. Bølger: ${BOLGE_KILDE}.</p>` +
+        `<dl class="facts">` +
+        `<dt>Oljetype</dt><dd><b>${oljetype}</b>${oil.sintef_ref ? ` (${oil.sintef_ref})` : ""}</dd>` +
+        (oil.note ? `<dt></dt><dd class="note">${oil.note}</dd>` : "") +
+        `<dt>Utslipp</dt><dd>500 m³/t i 12 t (6 000 m³) fra ${fmtStart}</dd>` +
+        `<dt>Felt</dt><dd>${inst.field}</dd>` +
+        `<dt>Innretning</dt><dd>${inst.facility_kind}, ${inst.functions}</dd>` +
+        `<dt>Operatør</dt><dd>${inst.operator}</dd>` +
+        `<dt>Havdyp</dt><dd>${inst.water_depth_m} m</dd>` +
+        `</dl>` +
+        `<p class="note">Flaket viser utbredelsen av partikler i overflaten som har minst 1 % av oljen ` +
+        `igjen, med 1 km buffer. Det er ikke et mål på oljetykkelse.` +
+        (skjulte > 0 ? ` ${skjulte} strandede partikler med under ${MIN_STRANDET_KG} kg olje er ikke vist.` : "") +
+        `</p>` +
+        `<p class="note"><a href="${inst.factpage_url}" target="_blank" rel="noopener">` +
+        `Faktaside (Sokkeldirektoratet)</a></p>`;
     }
 
     // ---- Lag ----
     async function loadLayers() {
-      const [stations, installations] = await Promise.all([
-        fetch("../data/processed/wind_stations.geojson", { cache: "no-store" }).then((r) => r.json()),
-        fetch("../data/processed/installations.geojson", { cache: "no-store" }).then((r) => r.json()),
+      const [stations, installations, oilCsv] = await Promise.all([
+        getJson(`${DATA}/wind_stations.geojson`),
+        getJson(`${DATA}/installations.geojson`),
+        fetch(`${CONFIG}/oil_types.csv`, { cache: "no-store" }).then((r) => (r.ok ? r.text() : "")),
       ]);
+      oilByField = Object.fromEntries(parseCsv(oilCsv).map((r) => [r.field, r]));
 
-      L.geoJSON(stations, {
+      const wind = L.geoJSON(stations, {
         pointToLayer: (feature, latlng) =>
-          L.marker(latlng, { icon: windArrowIcon(feature.properties.dominant_dir_deg) }),
+          L.marker(latlng, { icon: windArrowIcon(feature.properties.dominant_dir_deg), keyboard: false }),
         onEachFeature: (feature, layer) => {
           const p = feature.properties;
           layer.bindPopup(
-            `<b>${p.name}</b><br>` +
+            `<b>${p.name}</b> (fiktiv stasjon)<br>` +
               `Dominerende retning: ${p.dominant_label} (${p.dominant_dir_deg}&deg;, fra)<br>` +
               `Middelvind: ${p.mean_wind_speed} m/s<br>` +
-              `Andel i dominerende sektor: ${(p.dominant_share * 100).toFixed(0)} %`
+              `<i>Mock-data. Brukes ikke i oljesimuleringen.</i>`
           );
         },
       }).addTo(map);
 
       // Ekte innretninger fra Sokkeldirektoratet (scripts/fetch_facilities.py).
-      // Klikk-for-utslipp kobles på igjen i steg 3, når OpenOil-resultatene finnes.
-      L.geoJSON(installations, {
-        pointToLayer: (feature, latlng) => L.marker(latlng, { icon: installationIcon(false) }),
+      const instLayer = L.geoJSON(installations, {
+        pointToLayer: (feature, latlng) => {
+          const m = L.marker(latlng, { icon: installationIcon(false), zIndexOffset: 1000 });
+          markers[feature.properties.slug] = m;
+          return m;
+        },
         onEachFeature: (feature, layer) => {
           const p = feature.properties;
-          layer.bindTooltip(p.name);
-          layer.bindPopup(
-            `<b>${p.name}</b><br>` +
-              `Felt: ${p.field}<br>` +
-              `Type: ${p.facility_kind}<br>` +
-              `Funksjon: ${p.functions}<br>` +
-              `Operatør: ${p.operator}<br>` +
-              `Havdyp: ${p.water_depth_m} m<br>` +
-              `<a href="${p.factpage_url}" target="_blank" rel="noopener">Faktaside (Sokkeldirektoratet)</a>`
-          );
+          layer.bindTooltip(`${p.name} – klikk for utslipp`, { direction: "top", offset: [0, -14] });
+          layer.on("click", () => startSpill(p));
         },
       }).addTo(map);
+      map.fitBounds(instLayer.getBounds(), { paddingTopLeft: [40, 40], paddingBottomRight: [360, 40] });
+
+      L.control.layers(null, {
+        "Fiktiv vind (bakgrunn)": wind,
+        "Oljeutslipp": spillLayer,
+      }, { position: "topleft", collapsed: true }).addTo(map);
     }
 
     // ---- Tidsakse-kontroll (nede til venstre) ----
@@ -321,12 +474,13 @@
     timeline.onAdd = function () {
       const div = L.DomUtil.create("div", "card timeline idle");
       div.innerHTML =
-        '<div class="title">Oljeutslipp – tidsakse</div>' +
+        '<div class="title">Tidsakse og massebalanse</div>' +
         '<div class="row">' +
         '  <button class="play" title="Spill av / pause" disabled>&#9654;</button>' +
-        `  <input type="range" class="slider" min="0" max="${TOTAL_HOURS}" value="0" step="1" disabled />` +
+        '  <input type="range" class="slider" min="0" max="72" value="0" step="1" disabled ' +
+        '         aria-label="Modelltime" />' +
         "</div>" +
-        '<div class="readout">Klikk et oljefelt for å starte.</div>';
+        '<div class="readout">Klikk en innretning for å starte.</div>';
       // Ikke la klikk/dra på kontrollen flytte kartet.
       L.DomEvent.disableClickPropagation(div);
       L.DomEvent.disableScrollPropagation(div);
@@ -346,15 +500,26 @@
     };
     timeline.addTo(map);
 
-    // SVG-swatch til tegnforklaringen (gjenbruker ikon-fargene).
+    // SVG-swatch til tegnforklaringen (gjenbruker kartets farger).
     function legendSwatch(type) {
       if (type === "wind") {
         return `<svg class="swatch" viewBox="0 0 22 22"><path d="M11 19 L11 4 M6.5 9 L11 4 L15.5 9" ` +
-          `fill="none" stroke="${C.blue}" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round"/></svg>`;
+          `fill="none" stroke="${C.muted}" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round"/></svg>`;
       }
-      const accent = type === "oil" ? C.orange : C.aqua;
+      if (type === "slick") {
+        return `<svg class="swatch" viewBox="0 0 14 14"><rect x="1" y="1" width="12" height="12" rx="3" ` +
+          `fill="${C.ink}" fill-opacity="0.35" stroke="${C.ink}" stroke-width="1.2"/></svg>`;
+      }
+      if (type === "trail") {
+        return `<svg class="swatch" viewBox="0 0 14 14"><rect x="1" y="1" width="12" height="12" rx="3" ` +
+          `fill="${C.ink}" fill-opacity="0.12"/></svg>`;
+      }
+      if (type === "stranded") {
+        return `<svg class="swatch" viewBox="0 0 14 14"><circle cx="7" cy="7" r="4.5" fill="${STRANDED_COLOR}" ` +
+          `stroke="${C.surface}" stroke-width="1"/></svg>`;
+      }
       return `<svg class="swatch" viewBox="0 0 30 30"><circle cx="15" cy="15" r="12" fill="${C.surface}" ` +
-        `stroke="${accent}" stroke-width="2"/><g stroke="${accent}" stroke-width="1.6" fill="none" ` +
+        `stroke="${C.orange}" stroke-width="2"/><g stroke="${C.orange}" stroke-width="1.6" fill="none" ` +
         `stroke-linecap="round" stroke-linejoin="round"><path d="M15 6 L11 17 M15 6 L19 17 M12.6 10.6 H17.4"/>` +
         `<path d="M8 17 H22"/></g></svg>`;
     }
@@ -363,9 +528,12 @@
     legend.onAdd = function () {
       const div = L.DomUtil.create("div", "card legend");
       div.innerHTML =
-        "<b>Tegnforklaring</b>" +
-        `<div class="item">${legendSwatch("wind")} Vindstasjon (pil = dit vinden blåser)</div>` +
-        `<div class="item">${legendSwatch("gas")} Produksjonsinnretning (Sokkeldirektoratet)</div>`;
+        '<div class="title">Tegnforklaring</div>' +
+        `<div class="item">${legendSwatch("inst")} Produksjonsinnretning (Sokkeldirektoratet)</div>` +
+        `<div class="item">${legendSwatch("slick")} Oljeflak i overflaten nå</div>` +
+        `<div class="item">${legendSwatch("trail")} Flak tidligere timer</div>` +
+        `<div class="item">${legendSwatch("stranded")} Strandet olje (≥ ${MIN_STRANDET_KG} kg per partikkel)</div>` +
+        `<div class="item">${legendSwatch("wind")} Fiktiv vindstasjon (pil = dit vinden blåser)</div>`;
       return div;
     };
     legend.addTo(map);
@@ -373,8 +541,8 @@
     loadLayers().catch((err) => {
       console.error(err);
       alert(
-        "Klarte ikke å laste GeoJSON. Kjør scriptene og åpne siden via en lokal " +
-          "HTTP-server (se README/CLAUDE.md)."
+        "Klarte ikke å laste GeoJSON. Åpne siden via en lokal HTTP-server fra prosjektroten " +
+          "(se README/CLAUDE.md)."
       );
     });
   </script>

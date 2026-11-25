@@ -1,8 +1,7 @@
 # Oljedrift under ekstremværet «Ingunn»
 
-> **Status:** under arbeid. Steg 1 (ekte innretninger) er ferdig, og notebooken (steg 2) er
-> klar til test i Colab. Det nye webkartet (steg 3) kommer. Seksjoner merket *(kommer)* fylles
-> ut underveis.
+> **Status:** innretninger, OpenOil-notebook og webkart er ferdige. Resultatene i
+> `data/processed/spills/` er fra full kjøring i Colab (72 t, 2000 partikler per innretning).
 
 ## 1. Hva prosjektet er
 
@@ -37,14 +36,31 @@ data/processed/installations.geojson ──► (GitHub raw-URL)
 ```
 
 ```
-config/oil_types.csv          kobling felt → oljetype (leses av notebooken)
+config/oil_types.csv          kobling felt → oljetype (leses av notebooken og kartet)
 scripts/fetch_facilities.py   henter innretninger fra Sokkeldirektoratet
 scripts/make_mock_data.py     fiktive vindstasjoner (bakgrunnslag i kartet)
 scripts/process.py            dominerende vindretning per mock-stasjon
+notebooks/openoil_ingunn.ipynb  OpenOil-simuleringen (kjøres i Colab)
 data/raw/                     rådata (git-ignorert, regenereres)
 data/processed/               GeoJSON som kartet og notebooken leser (sjekkes inn)
+data/processed/spills/        OpenOil-resultater: <slug>.geojson og <slug>_stranded.geojson
 web/index.html                webkartet
 ```
+
+### Webkartet
+
+Klikk en innretning for å spille av utslippet time for time. Kartet viser:
+- **Flaket nå** (mørkt) og et svakt spor av flakene i tidligere timer.
+- **Strandet olje** som punkter, én per partikkel som har nådd land, frem til valgt time. Punkter med
+  under 1 kg olje vises ikke. Ellers ville Draugen vist 1254 punkter uten olje: partiklene mistet
+  oljen til fordampning og dispergering før de nådde land.
+- **Tidsakse** med dato og norsk tid (CET, UTC+1), modelltime, flakareal og massebalansen
+  (overflate, under overflaten, fordampet, dispergert, strandet) i prosent av utsluppet olje.
+- **Infoboks** med datakilder, oljetype og SINTEF-referanse fra `config/oil_types.csv`, og fakta om
+  innretningen.
+
+Bakgrunnskartet er Kartverkets gråtonekart, begrenset til zoomnivå 11 (se tabellen i avsnitt 6).
+Vindpilene er fiktive (mock) og brukes ikke i simuleringen. De kan slås av i lagvelgeren.
 
 ### Kjøre lokalt
 
@@ -154,7 +170,7 @@ skrevet nøyaktig slik de står i OpenDrifts oljeliste.
 | MEPS 2,5 km (MetCoOp, met.no) | Vind | NLOD og CC BY 4.0 ([met.no: Licensing and crediting](https://www.met.no/en/free-meteorological-data/Licensing-and-crediting)) | «Based on data from MET Norway» |
 | WAVEWATCH III 4 km (met.no) | Bølgehøyde, periode og Stokes-drift | CC BY 4.0 (står i filenes metadata) | «Based on data from MET Norway» |
 | GSHHG (via roaring-landmask i OpenDrift) | Landmaske og klipping av flak | LGPL ([GSHHG](https://www.soest.hawaii.edu/pwessel/gshhg/), fra versjon 2.2.2) | Wessel, P. & Smith, W. H. F. (1996). A Global Self-consistent, Hierarchical, High-resolution Shoreline Database. *J. Geophys. Res.*, 101, 8741–8743 |
-| Kartverket | Bakgrunnskart | *(sjekkes i steg 3)* | *(kommer)* |
+| Kartverket, Topografisk norgeskart gråtone (cache-WMTS `topograatone`) | Bakgrunnskart i webkartet | CC BY 4.0 ([Kartverket: vilkår for bruk](https://www.kartverket.no/en/api-and-data/terms-of-use)). Vilkårene sier at cache-tjenestene på zoomnivå 12–20 bygger på Geovekst-data som Kartverket ikke har alle rettigheter til. Hvilke lag det gjelder, **må avklares**. Kartet er derfor begrenset til zoom 11 | «©Kartverket», med lenke til kartverket.no |
 
 ## 7. Lisens for egen kode
 
@@ -163,7 +179,36 @@ ikke OpenDrift; den installeres med pip i Colab. GPL-kravene gjelder den som dis
 alene eller i en samlet pakke. Notebooken importerer bare biblioteket. *(Dette er ikke juridisk råd.)*
 OpenDrift er en ekstern avhengighet under GPL-2.0. *(LICENSE-fil legges til når du har bestemt deg.)*
 
-## 8. Begrensninger *(kommer)*
+## 8. Begrensninger
+
+**Scenarioet**
+- **Hypotetiske utslipp.** Rate (500 m³/t), varighet (12 t) og overflateutslipp er valgt for
+  sammenligning. De bygger ikke på en risikoanalyse. En undervannsutblåsning ville oppført seg
+  annerledes.
+- **Én kjøring per innretning.** Det er ingen ensemble eller variasjon i starttid, så usikkerheten
+  i banene er ikke tallfestet. 2000 partikler gir en grov fordeling, særlig for strandet olje.
+- **72 timer.** Simuleringen stopper mens flakene fra Åsgard, Heidrun, Skarv og Norne fortsatt sprer
+  seg. Hva som skjer med den gjenværende oljen etterpå, er ikke modellert.
+
+**Inndata**
+- **Prognoser, ikke reanalyse.** MEPS og WW3 er satt sammen av de første 24 timene fra hver
+  00Z-kjøring. NorKyst800 er en modell, ikke målinger. Ingen av drivkreftene er sjekket mot
+  observasjoner under Ingunn.
+- **Oppløsning.** NorKyst800 (800 m) og GSHHG-landmasken løser ikke opp trange sund, fjorder og
+  skjærgård. Strandingsposisjonene er derfor omtrentlige. Flakene er klippet mot GSHHG og overlapper
+  Kartverkets kystlinje med opptil ~0,1 km².
+- **Oljetyper.** Forvitringen bygger på SINTEF-labdata i NOAAs database og OpenOils
+  parametriseringer, som ikke er laget spesielt for orkan. Aasta Hansteen bruker en stedfortreder
+  (SKARV KONDENSAT 2014).
+
+**Visningen**
+- **Flakareal er utbredelse, ikke oljedekke.** Hver partikkel får 1 km buffer. Arealet sier hvor
+  oljen er spredt, ikke hvor tykk den er. Åsgard A har et flak på 565 km² etter 72 t med bare 1,7 % av
+  oljen igjen i overflaten.
+- **Massefilteret på 1 %** gjør at partikler med svært lite olje ikke tegnes. Aasta Hansteen har
+  0,5 % olje i overflaten etter 72 t, men ingen flak.
+- **Strandet olje under 1 kg per partikkel** vises ikke i kartet, men inngår i massebalansen.
+- **Vindpilene i kartet er fiktive** og har ingenting med simuleringen å gjøre.
 
 ## 9. Bruk av KI
 

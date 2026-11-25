@@ -4,20 +4,17 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Prosjekt
 
-`kartapp` er et geospatialt Python-prosjekt (uv + GeoPandas) som visualiserer
-dominerende vindretning langs Nordlandskysten sammen med offshore-installasjoner i
-et Leaflet-kart.
+`kartapp` er et geospatialt Python-prosjekt (uv + GeoPandas) og en emneoppgave
+(Geografisk IT og KI, UiA). Det simulerer hypotetiske oljeutslipp fra 8 produksjonsinnretninger
+i Norskehavet under ekstremværet «Ingunn» (31.01–01.02.2024) med OpenDrift/OpenOil, og viser
+resultatet i et Leaflet-kart.
 
-Prosjektet er en emneoppgave (Geografisk IT og KI, UiA). Det simulerer hypotetiske
-oljeutslipp under ekstremværet «Ingunn» (31.01–01.02.2024) med OpenDrift/OpenOil.
-Arbeidet går i tre steg:
-- **Steg 1 (ferdig):** ekte innretninger fra Sokkeldirektoratet (NLOD 2.0) erstatter mock.
-- **Steg 2:** Colab-notebook `notebooks/openoil_ingunn.ipynb` (OpenOil + NorKyst800 + MEPS)
-  → `spills/*.geojson` + PNG i zip, som brukeren committer.
-- **Steg 3:** webkartet viser OpenOil-resultatene. `scripts/simulate_spill.py` og
-  `scripts/prepare_land.py` (gammel forenklet driftmodell) slettes da.
+Flyten: ekte innretninger fra Sokkeldirektoratet (NLOD 2.0) → Colab-notebook
+`notebooks/openoil_ingunn.ipynb` (OpenOil + NorKyst800 + MEPS + WW3) → zip med
+`spills/*.geojson` + PNG, som brukeren pakker ut i `data/processed/spills/` og committer →
+webkartet. Den gamle forenklede driftmodellen (`simulate_spill.py`, `prepare_land.py`) er slettet.
 
-Vindstasjonene er fortsatt mock og brukes kun som bakgrunnslag.
+Vindstasjonene er mock og brukes kun som bakgrunnslag; de inngår ikke i simuleringen.
 Publiseres via GitHub Pages fra repoet `andreaszahl/oilspill` (sti `/oilspill/`).
 
 ## Kommandoer
@@ -81,8 +78,14 @@ Stegene kommuniserer via filer på disk (`data/`):
    `TESTMODUS=True` gir 6 t, 200 partikler og 2 innretninger.
 
 5. **[web/index.html](web/index.html)** – statisk Leaflet-side (CDN, ingen byggesteg). Henter
-   GeoJSON med `fetch` og relative stier. Vindpilene peker **dit vinden blåser**:
-   `(dominant_dir_deg + 180) % 360`.
+   GeoJSON og `config/oil_types.csv` med `fetch` og relative stier (`../data/processed`,
+   `../config`), så den virker både lokalt og under `/oilspill/web/`. Klikk på en innretning
+   laster `spills/<slug>.geojson` + `_stranded.geojson`; ett Leaflet-lag per time bygges én gang
+   (canvas-renderer) og slås av/på under avspilling. Tid vises i `Europe/Oslo`. Strandede punkter
+   under `MIN_STRANDET_KG` (1 kg) vises ikke. Bakgrunn: Kartverkets `topograatone`
+   (cache-WMTS, CC BY 4.0) **begrenset til zoom 11** – nivå 12–20 har Geovekst-forbehold.
+   Massebalansen bruker kategoriske fargeplasser 1–5 fra dataviz-paletten i fast rekkefølge.
+   Vindpilene peker **dit vinden blåser**: `(dominant_dir_deg + 180) % 360`.
 
 ### Konvensjoner å holde på
 - CRS-kontrakt: beregn metriske avstander/areal i EPSG:25833, men lagre/eksporter alltid i EPSG:4326.
